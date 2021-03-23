@@ -110,21 +110,16 @@ using OpenXmlPowerTools.HtmlToWml;
 using OpenXmlPowerTools.HtmlToWml.CSS;
 using System.Text.RegularExpressions;
 
-namespace OpenXmlPowerTools.HtmlToWml
-{
-    public class ElementToStyleMap
-    {
+namespace OpenXmlPowerTools.HtmlToWml {
+    public class ElementToStyleMap {
         public string ElementName;
         public string StyleName;
     }
 
-    public static class LocalExtensions
-    {
-        public static CssExpression GetProp(this XElement element, string propertyName)
-        {
+    public static class LocalExtensions {
+        public static CssExpression GetProp(this XElement element, string propertyName) {
             Dictionary<string, CssExpression> d = element.Annotation<Dictionary<string, CssExpression>>();
-            if (d != null)
-            {
+            if (d != null) {
                 if (d.ContainsKey(propertyName))
                     return d[propertyName];
             }
@@ -132,15 +127,13 @@ namespace OpenXmlPowerTools.HtmlToWml
         }
     }
 
-    public class HtmlToWmlConverterCore
-    {
+    public class HtmlToWmlConverterCore {
         public static WmlDocument ConvertHtmlToWml(
             string defaultCss,
             string authorCss,
             string userCss,
             XElement xhtml,
-            HtmlToWmlConverterSettings settings)
-        {
+            HtmlToWmlConverterSettings settings) {
             return ConvertHtmlToWml(defaultCss, authorCss, userCss, xhtml, settings, null, null);
         }
 
@@ -151,8 +144,7 @@ namespace OpenXmlPowerTools.HtmlToWml
             XElement xhtml,
             HtmlToWmlConverterSettings settings,
             WmlDocument emptyDocument,
-            string annotatedHtmlDumpFileName)
-        {
+            string annotatedHtmlDumpFileName) {
             if (emptyDocument == null)
                 emptyDocument = HtmlToWmlConverter.EmptyDocument;
 
@@ -180,10 +172,8 @@ namespace OpenXmlPowerTools.HtmlToWml
 
             WmlDocument newWmlDocument;
 
-            using (OpenXmlMemoryStreamDocument streamDoc = new OpenXmlMemoryStreamDocument(emptyDocument))
-            {
-                using (WordprocessingDocument wDoc = streamDoc.GetWordprocessingDocument())
-                {
+            using (OpenXmlMemoryStreamDocument streamDoc = new OpenXmlMemoryStreamDocument(emptyDocument)) {
+                using (WordprocessingDocument wDoc = streamDoc.GetWordprocessingDocument()) {
                     AnnotateOlUl(wDoc, html);
                     UpdateMainDocumentPart(wDoc, html, settings);
                     NormalizeMainDocumentPart(wDoc);
@@ -199,11 +189,9 @@ namespace OpenXmlPowerTools.HtmlToWml
         }
 
 
-        private static object TransformToLower(XNode node)
-        {
+        private static object TransformToLower(XNode node) {
             XElement element = node as XElement;
-            if (element != null)
-            {
+            if (element != null) {
                 XElement e = new XElement(element.Name.LocalName.ToLower(),
                     element.Attributes().Select(a => new XAttribute(a.Name.LocalName.ToLower(), a.Value)),
                     element.Nodes().Select(n => TransformToLower(n)));
@@ -212,10 +200,8 @@ namespace OpenXmlPowerTools.HtmlToWml
             return node;
         }
 
-        private static XElement AddPseudoCells(XElement html)
-        {
-            while (true)
-            {
+        private static XElement AddPseudoCells(XElement html) {
+            while (true) {
                 var rowSpanCell = html
                     .Descendants(XhtmlNoNamespace.td)
                     .FirstOrDefault(td => td.Attribute(XhtmlNoNamespace.rowspan) != null && td.Attribute("HtmlToWmlVMergeRestart") == null);
@@ -232,10 +218,8 @@ namespace OpenXmlPowerTools.HtmlToWml
                     .ElementsAfterSelf(XhtmlNoNamespace.tr)
                     .Take(numberPseudoToAdd)
                     .ToList();
-                foreach (var rowToAddTo in rowsToAddTo)
-                {
-                    if (colNumber > 0)
-                    {
+                foreach (var rowToAddTo in rowsToAddTo) {
+                    if (colNumber > 0) {
                         var tdToAddAfter = rowToAddTo
                             .Elements(XhtmlNoNamespace.td)
                             .Skip(colNumber - 1)
@@ -244,9 +228,7 @@ namespace OpenXmlPowerTools.HtmlToWml
                             rowSpanCell.Attributes(),
                             new XAttribute("HtmlToWmlVMergeNoRestart", "true"));
                         tdToAddAfter.AddAfterSelf(td);
-                    }
-                    else
-                    {
+                    } else {
                         var tdToAddBefore = rowToAddTo
                             .Elements(XhtmlNoNamespace.td)
                             .Skip(colNumber)
@@ -261,19 +243,16 @@ namespace OpenXmlPowerTools.HtmlToWml
             return html;
         }
 
-        public class NumberedItemAnnotation
-        {
+        public class NumberedItemAnnotation {
             public int numId;
             public int ilvl;
             public string listStyleType;
         }
 
-        private static void AnnotateOlUl(WordprocessingDocument wDoc, XElement html)
-        {
+        private static void AnnotateOlUl(WordprocessingDocument wDoc, XElement html) {
             int numId;
             NumberingUpdater.GetNextNumId(wDoc, out numId);
-            foreach (var item in html.DescendantsAndSelf().Where(d => d.Name == XhtmlNoNamespace.ol || d.Name == XhtmlNoNamespace.ul))
-            {
+            foreach (var item in html.DescendantsAndSelf().Where(d => d.Name == XhtmlNoNamespace.ol || d.Name == XhtmlNoNamespace.ul)) {
                 XElement parentOlUl = item.Ancestors().Where(a => a.Name == XhtmlNoNamespace.ol || a.Name == XhtmlNoNamespace.ul).LastOrDefault();
                 int numIdToUse;
                 if (parentOlUl != null)
@@ -281,8 +260,7 @@ namespace OpenXmlPowerTools.HtmlToWml
                 else
                     numIdToUse = numId++;
                 string lst = CssApplier.GetComputedPropertyValue(null, item, "list-style-type", null).ToString();
-                item.AddAnnotation(new NumberedItemAnnotation
-                {
+                item.AddAnnotation(new NumberedItemAnnotation {
                     numId = numIdToUse,
                     ilvl = item.Ancestors().Where(a => a.Name == XhtmlNoNamespace.ol || a.Name == XhtmlNoNamespace.ul).Count(),
                     listStyleType = lst,
@@ -290,8 +268,7 @@ namespace OpenXmlPowerTools.HtmlToWml
             }
         }
 
-        private static void UpdateMainDocumentPart(WordprocessingDocument wDoc, XElement html, HtmlToWmlConverterSettings settings)
-        {
+        private static void UpdateMainDocumentPart(WordprocessingDocument wDoc, XElement html, HtmlToWmlConverterSettings settings) {
             XDocument xDoc = XDocument.Parse(
 @"<w:document xmlns:wpc='http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas'
             xmlns:mc='http://schemas.openxmlformats.org/markup-compatibility/2006'
@@ -323,13 +300,10 @@ namespace OpenXmlPowerTools.HtmlToWml
             wDoc.MainDocumentPart.PutXDocument(xDoc);
         }
 
-        private static object TransformWhiteSpaceInPreCodeTtKbdSamp(XNode node, bool inPre, bool inOther)
-        {
+        private static object TransformWhiteSpaceInPreCodeTtKbdSamp(XNode node, bool inPre, bool inOther) {
             XElement element = node as XElement;
-            if (element != null)
-            {
-                if (element.Name == XhtmlNoNamespace.pre)
-                {
+            if (element != null) {
+                if (element.Name == XhtmlNoNamespace.pre) {
                     return new XElement(element.Name,
                         element.Attributes(),
                         element.Nodes().Select(n => TransformWhiteSpaceInPreCodeTtKbdSamp(n, true, false)));
@@ -337,8 +311,7 @@ namespace OpenXmlPowerTools.HtmlToWml
                 if (element.Name == XhtmlNoNamespace.code ||
                     element.Name == XhtmlNoNamespace.tt ||
                     element.Name == XhtmlNoNamespace.kbd ||
-                    element.Name == XhtmlNoNamespace.samp)
-                {
+                    element.Name == XhtmlNoNamespace.samp) {
                     return new XElement(element.Name,
                         element.Attributes(),
                         element.Nodes().Select(n => TransformWhiteSpaceInPreCodeTtKbdSamp(n, false, true)));
@@ -348,12 +321,10 @@ namespace OpenXmlPowerTools.HtmlToWml
                     element.Nodes().Select(n => TransformWhiteSpaceInPreCodeTtKbdSamp(n, false, false)));
             }
             XText xt = node as XText;
-            if (xt != null && inPre)
-            {
+            if (xt != null && inPre) {
                 var val = xt.Value.TrimStart('\r', '\n').TrimEnd('\r', '\n');
                 var groupedCharacters = val.GroupAdjacent(c => c == '\r' || c == '\n');
-                var newNodes = groupedCharacters.Select(g =>
-                {
+                var newNodes = groupedCharacters.Select(g => {
                     if (g.Key == true)
                         return (object)(new XElement(XhtmlNoNamespace.br));
                     string x = g.Select(c => c.ToString()).StringConcatenate();
@@ -361,8 +332,7 @@ namespace OpenXmlPowerTools.HtmlToWml
                 });
                 return newNodes;
             }
-            if (xt != null && inOther)
-            {
+            if (xt != null && inOther) {
                 var val = xt.Value.TrimStart('\r', '\n', '\t', ' ').TrimEnd('\r', '\n', '\t', ' ');
                 return new XText(val);
             }
@@ -534,16 +504,13 @@ namespace OpenXmlPowerTools.HtmlToWml
             { W.bar, 60 },
         };
 
-        private static object TransformAndOrderElements(XNode node)
-        {
+        private static object TransformAndOrderElements(XNode node) {
             XElement element = node as XElement;
-            if (element != null)
-            {
+            if (element != null) {
                 if (element.Name == W.pPr)
                     return new XElement(element.Name,
                         element.Attributes(),
-                        element.Elements().Select(e => (XElement)TransformAndOrderElements(e)).OrderBy(e =>
-                        {
+                        element.Elements().Select(e => (XElement)TransformAndOrderElements(e)).OrderBy(e => {
                             if (Order_pPr.ContainsKey(e.Name))
                                 return Order_pPr[e.Name];
                             return 999;
@@ -552,8 +519,7 @@ namespace OpenXmlPowerTools.HtmlToWml
                 if (element.Name == W.rPr)
                     return new XElement(element.Name,
                         element.Attributes(),
-                        element.Elements().Select(e => (XElement)TransformAndOrderElements(e)).OrderBy(e =>
-                        {
+                        element.Elements().Select(e => (XElement)TransformAndOrderElements(e)).OrderBy(e => {
                             if (Order_rPr.ContainsKey(e.Name))
                                 return Order_rPr[e.Name];
                             return 999;
@@ -562,8 +528,7 @@ namespace OpenXmlPowerTools.HtmlToWml
                 if (element.Name == W.tblPr)
                     return new XElement(element.Name,
                         element.Attributes(),
-                        element.Elements().Select(e => (XElement)TransformAndOrderElements(e)).OrderBy(e =>
-                        {
+                        element.Elements().Select(e => (XElement)TransformAndOrderElements(e)).OrderBy(e => {
                             if (Order_tblPr.ContainsKey(e.Name))
                                 return Order_tblPr[e.Name];
                             return 999;
@@ -572,8 +537,7 @@ namespace OpenXmlPowerTools.HtmlToWml
                 if (element.Name == W.tcPr)
                     return new XElement(element.Name,
                         element.Attributes(),
-                        element.Elements().Select(e => (XElement)TransformAndOrderElements(e)).OrderBy(e =>
-                        {
+                        element.Elements().Select(e => (XElement)TransformAndOrderElements(e)).OrderBy(e => {
                             if (Order_tcPr.ContainsKey(e.Name))
                                 return Order_tcPr[e.Name];
                             return 999;
@@ -582,8 +546,7 @@ namespace OpenXmlPowerTools.HtmlToWml
                 if (element.Name == W.tcBorders)
                     return new XElement(element.Name,
                         element.Attributes(),
-                        element.Elements().Select(e => (XElement)TransformAndOrderElements(e)).OrderBy(e =>
-                        {
+                        element.Elements().Select(e => (XElement)TransformAndOrderElements(e)).OrderBy(e => {
                             if (Order_tcBorders.ContainsKey(e.Name))
                                 return Order_tcBorders[e.Name];
                             return 999;
@@ -592,8 +555,7 @@ namespace OpenXmlPowerTools.HtmlToWml
                 if (element.Name == W.tblBorders)
                     return new XElement(element.Name,
                         element.Attributes(),
-                        element.Elements().Select(e => (XElement)TransformAndOrderElements(e)).OrderBy(e =>
-                        {
+                        element.Elements().Select(e => (XElement)TransformAndOrderElements(e)).OrderBy(e => {
                             if (Order_tblBorders.ContainsKey(e.Name))
                                 return Order_tblBorders[e.Name];
                             return 999;
@@ -602,8 +564,7 @@ namespace OpenXmlPowerTools.HtmlToWml
                 if (element.Name == W.pBdr)
                     return new XElement(element.Name,
                         element.Attributes(),
-                        element.Elements().Select(e => (XElement)TransformAndOrderElements(e)).OrderBy(e =>
-                        {
+                        element.Elements().Select(e => (XElement)TransformAndOrderElements(e)).OrderBy(e => {
                             if (Order_pBdr.ContainsKey(e.Name))
                                 return Order_pBdr[e.Name];
                             return 999;
@@ -628,19 +589,17 @@ namespace OpenXmlPowerTools.HtmlToWml
             return node;
         }
 
-        private static void AddNonBreakingSpacesForSpansWithWidth(WordprocessingDocument wDoc, XElement body)
-        {
+        private static void AddNonBreakingSpacesForSpansWithWidth(WordprocessingDocument wDoc, XElement body) {
             List<XElement> runsWithWidth = body
                 .Descendants(W.r)
                 .Where(r => r.Attribute(PtOpenXml.HtmlToWmlCssWidth) != null)
                 .ToList();
-            foreach (XElement run in runsWithWidth)
-            {
+            foreach (XElement run in runsWithWidth) {
                 XElement p = run.Ancestors(W.p).FirstOrDefault();
                 XElement pPr = p != null ? p.Element(W.pPr) : null;
                 XElement rPr = run.Element(W.rPr);
                 XElement rFonts = rPr != null ? rPr.Element(W.rFonts) : null;
-                string str = run.Descendants(W.t).Select(t => (string) t).StringConcatenate();
+                string str = run.Descendants(W.t).Select(t => (string)t).StringConcatenate();
                 if ((pPr == null) || (rPr == null) || (rFonts == null) || (str == "")) continue;
 
                 AdjustFontAttributes(wDoc, run, pPr, rPr);
@@ -652,28 +611,26 @@ namespace OpenXmlPowerTools.HtmlToWml
                 FontType ft = DetermineFontTypeFromCharacter(charToExamine, csa);
                 string fontType = null;
                 string languageType = null;
-                switch (ft)
-                {
+                switch (ft) {
                     case FontType.Ascii:
-                        fontType = (string) rFonts.Attribute(W.ascii);
+                        fontType = (string)rFonts.Attribute(W.ascii);
                         languageType = "western";
                         break;
                     case FontType.HAnsi:
-                        fontType = (string) rFonts.Attribute(W.hAnsi);
+                        fontType = (string)rFonts.Attribute(W.hAnsi);
                         languageType = "western";
                         break;
                     case FontType.EastAsia:
-                        fontType = (string) rFonts.Attribute(W.eastAsia);
+                        fontType = (string)rFonts.Attribute(W.eastAsia);
                         languageType = "eastAsia";
                         break;
                     case FontType.CS:
-                        fontType = (string) rFonts.Attribute(W.cs);
+                        fontType = (string)rFonts.Attribute(W.cs);
                         languageType = "bidi";
                         break;
                 }
 
-                if (fontType != null)
-                {
+                if (fontType != null) {
                     XAttribute fontNameAttribute = run.Attribute(PtOpenXml.FontName);
                     if (fontNameAttribute == null)
                         run.Add(new XAttribute(PtOpenXml.FontName, fontType));
@@ -681,15 +638,11 @@ namespace OpenXmlPowerTools.HtmlToWml
                         fontNameAttribute.SetValue(fontType);
                 }
 
-                if (languageType != null)
-                {
+                if (languageType != null) {
                     XAttribute languageTypeAttribute = run.Attribute(PtOpenXml.LanguageType);
-                    if (languageTypeAttribute == null)
-                    {
+                    if (languageTypeAttribute == null) {
                         run.Add(new XAttribute(PtOpenXml.LanguageType, languageType));
-                    }
-                    else
-                    {
+                    } else {
                         languageTypeAttribute.SetValue(languageType);
                     }
                 }
@@ -706,7 +659,7 @@ namespace OpenXmlPowerTools.HtmlToWml
                     continue;
 
                 // get HtmlToWmlCssWidth attribute
-                var cssWidth = (string) run.Attribute(PtOpenXml.HtmlToWmlCssWidth);
+                var cssWidth = (string)run.Attribute(PtOpenXml.HtmlToWmlCssWidth);
                 if (!cssWidth.EndsWith("pt")) continue;
 
                 cssWidth = cssWidth.Substring(0, cssWidth.Length - 2);
@@ -714,35 +667,29 @@ namespace OpenXmlPowerTools.HtmlToWml
                 if (!decimal.TryParse(cssWidth, out cssWidthInDecimal)) continue;
 
                 // calculate the number of non-breaking spaces to add
-                decimal cssWidthInPixels = cssWidthInDecimal/72*96;
-                var numberOfNpSpToAdd = (int) ((cssWidthInPixels - pixWidth)/nbSpWidth);
+                decimal cssWidthInPixels = cssWidthInDecimal / 72 * 96;
+                var numberOfNpSpToAdd = (int)((cssWidthInPixels - pixWidth) / nbSpWidth);
                 if (numberOfNpSpToAdd > 0)
                     run.Add(new XElement(W.t, "".PadRight(numberOfNpSpToAdd, '\u00a0')));
             }
         }
 
-        private static void NormalizeMainDocumentPart(WordprocessingDocument wDoc)
-        {
+        private static void NormalizeMainDocumentPart(WordprocessingDocument wDoc) {
             XDocument mainXDoc = wDoc.MainDocumentPart.GetXDocument();
             XElement newRoot = (XElement)NormalizeTransform(mainXDoc.Root);
             mainXDoc.Root.ReplaceWith(newRoot);
             wDoc.MainDocumentPart.PutXDocument();
         }
 
-        private static object NormalizeTransform(XNode node)
-        {
+        private static object NormalizeTransform(XNode node) {
             XElement element = node as XElement;
-            if (element != null)
-            {
-                if (element.Name == W.p && element.Elements().Any(c => c.Name == W.p || c.Name == W.tbl))
-                {
+            if (element != null) {
+                if (element.Name == W.p && element.Elements().Any(c => c.Name == W.p || c.Name == W.tbl)) {
                     var groupedChildren = element.Elements()
                         .GroupAdjacent(e => e.Name == W.p || e.Name == W.tbl);
                     var newContent = groupedChildren
-                        .Select(g =>
-                        {
-                            if (g.Key == false)
-                            {
+                        .Select(g => {
+                            if (g.Key == false) {
                                 XElement paragraph = new XElement(W.p,
                                     element.Elements(W.pPr),
                                     g.Where(gc => gc.Name != W.pPr));
@@ -759,31 +706,23 @@ namespace OpenXmlPowerTools.HtmlToWml
             return node;
         }
 
-        private enum NextExpected
-        {
+        private enum NextExpected {
             Paragraph,
             Run,
             SubRun,
         }
 
-        private static object Transform(XNode node, HtmlToWmlConverterSettings settings, WordprocessingDocument wDoc, NextExpected nextExpected, bool preserveWhiteSpace)
-        {
+        private static object Transform(XNode node, HtmlToWmlConverterSettings settings, WordprocessingDocument wDoc, NextExpected nextExpected, bool preserveWhiteSpace) {
             XElement element = node as XElement;
-            if (element != null)
-            {
-                if (element.Name == XhtmlNoNamespace.a)
-                {
+            if (element != null) {
+                if (element.Name == XhtmlNoNamespace.a) {
                     string rId = "R" + Guid.NewGuid().ToString().Replace("-", "");
                     string href = (string)element.Attribute(NoNamespace.href);
-                    if (href != null)
-                    {
+                    if (href != null) {
                         Uri uri = null;
-                        try
-                        {
+                        try {
                             uri = new Uri(href);
-                        }
-                        catch (UriFormatException)
-                        {
+                        } catch (UriFormatException) {
                             XElement rPr = GetRunProperties(element, settings);
                             XElement run = new XElement(W.r,
                                     rPr,
@@ -791,21 +730,16 @@ namespace OpenXmlPowerTools.HtmlToWml
                             return new[] { run };
                         }
 
-                        if (uri != null)
-                        {
+                        if (uri != null) {
                             wDoc.MainDocumentPart.AddHyperlinkRelationship(uri, true, rId);
-                            if (element.Element(XhtmlNoNamespace.img) != null)
-                            {
+                            if (element.Element(XhtmlNoNamespace.img) != null) {
                                 var imageTransformed = element.Nodes().Select(n => Transform(n, settings, wDoc, nextExpected, preserveWhiteSpace)).OfType<XElement>();
                                 var newImageTransformed = imageTransformed
-                                    .Select(i =>
-                                    {
-                                        if (i.Elements(W.drawing).Any())
-                                        {
+                                    .Select(i => {
+                                        if (i.Elements(W.drawing).Any()) {
                                             var newRun = new XElement(i);
                                             var docPr = newRun.Elements(W.drawing).Elements(WP.inline).Elements(WP.docPr).FirstOrDefault();
-                                            if (docPr != null)
-                                            {
+                                            if (docPr != null) {
                                                 var hlinkClick = new XElement(A.hlinkClick,
                                                     new XAttribute(R.id, rId),
                                                     new XAttribute(XNamespace.Xmlns + "a", A.a.NamespaceName));
@@ -837,8 +771,7 @@ namespace OpenXmlPowerTools.HtmlToWml
                 if (element.Name == XhtmlNoNamespace.body)
                     return element.Nodes().Select(n => Transform(n, settings, wDoc, nextExpected, preserveWhiteSpace));
 
-                if (element.Name == XhtmlNoNamespace.caption)
-                {
+                if (element.Name == XhtmlNoNamespace.caption) {
                     return new XElement(W.tr,
                         GetTableRowProperties(element),
                         new XElement(W.tc,
@@ -846,24 +779,17 @@ namespace OpenXmlPowerTools.HtmlToWml
                             element.Nodes().Select(n => Transform(n, settings, wDoc, NextExpected.Paragraph, preserveWhiteSpace))));
                 }
 
-                if (element.Name == XhtmlNoNamespace.div)
-                {
-                    if (nextExpected == NextExpected.Paragraph)
-                    {
+                if (element.Name == XhtmlNoNamespace.div) {
+                    if (nextExpected == NextExpected.Paragraph) {
                         if (element.Descendants().Any(d => d.Name == XhtmlNoNamespace.h1 ||
                             d.Name == XhtmlNoNamespace.li ||
                             d.Name == XhtmlNoNamespace.p ||
-                            d.Name == XhtmlNoNamespace.table))
-                        {
+                            d.Name == XhtmlNoNamespace.table)) {
                             return element.Nodes().Select(n => Transform(n, settings, wDoc, nextExpected, preserveWhiteSpace));
-                        }
-                        else
-                        {
+                        } else {
                             return GenerateNextExpected(element, settings, wDoc, null, nextExpected, false);
                         }
-                    }
-                    else
-                    {
+                    } else {
                         return element.Nodes().Select(n => Transform(n, settings, wDoc, nextExpected, preserveWhiteSpace));
                     }
                 }
@@ -872,13 +798,11 @@ namespace OpenXmlPowerTools.HtmlToWml
                     return element.Nodes().Select(n => Transform(n, settings, wDoc, NextExpected.Run, preserveWhiteSpace));
 
                 HeadingInfo hi = HeadingTagMap.FirstOrDefault(htm => htm.Name == element.Name);
-                if (hi != null)
-                {
+                if (hi != null) {
                     return GenerateNextExpected(element, settings, wDoc, hi.StyleName, NextExpected.Paragraph, false);
                 }
 
-                if (element.Name == XhtmlNoNamespace.hr)
-                {
+                if (element.Name == XhtmlNoNamespace.hr) {
                     int i = GetNextRectId();
                     XElement hr = XElement.Parse(
                       @"<w:p xmlns:w='http://schemas.openxmlformats.org/wordprocessingml/2006/main'
@@ -910,32 +834,26 @@ namespace OpenXmlPowerTools.HtmlToWml
                 if (element.Name == XhtmlNoNamespace.blockquote)
                     return element.Nodes().Select(n => Transform(n, settings, wDoc, nextExpected, preserveWhiteSpace));
 
-                if (element.Name == XhtmlNoNamespace.img)
-                {
-                    if (element.Parent.Name == XhtmlNoNamespace.body)
-                    {
+                if (element.Name == XhtmlNoNamespace.img) {
+                    if (element.Parent.Name == XhtmlNoNamespace.body) {
                         XElement para = new XElement(W.p,
                             GetParagraphPropertiesForImage(),
                             TransformImageToWml(element, settings, wDoc));
                         return para;
-                    }
-                    else
-                    {
+                    } else {
                         XElement content = TransformImageToWml(element, settings, wDoc);
                         return content;
                     }
                 }
 
-                if (element.Name == XhtmlNoNamespace.li)
-                {
+                if (element.Name == XhtmlNoNamespace.li) {
                     return GenerateNextExpected(element, settings, wDoc, null, NextExpected.Paragraph, false);
                 }
 
                 if (element.Name == XhtmlNoNamespace.ol)
                     return element.Nodes().Select(n => Transform(n, settings, wDoc, NextExpected.Paragraph, preserveWhiteSpace));
 
-                if (element.Name == XhtmlNoNamespace.p)
-                {
+                if (element.Name == XhtmlNoNamespace.p) {
                     return GenerateNextExpected(element, settings, wDoc, null, NextExpected.Paragraph, false);
                 }
 
@@ -958,33 +876,28 @@ namespace OpenXmlPowerTools.HtmlToWml
                     return null;
                 /****************************************** End SharePoint Specific ********************************************/
 
-                if (element.Name == XhtmlNoNamespace.span)
-                {
+                if (element.Name == XhtmlNoNamespace.span) {
                     var spanReplacement = element.Nodes().Select(n => Transform(n, settings, wDoc, nextExpected, preserveWhiteSpace));
                     var dummyElement = new XElement("dummy", spanReplacement);
                     var firstChild = dummyElement.Elements().FirstOrDefault();
                     XElement run = null;
                     if (firstChild != null && firstChild.Name == W.r)
                         run = firstChild;
-                    if (run != null)
-                    {
+                    if (run != null) {
                         Dictionary<string, CssExpression> computedProperties = element.Annotation<Dictionary<string, CssExpression>>();
-                        if (computedProperties != null && computedProperties.ContainsKey("width"))
-                        {
+                        if (computedProperties != null && computedProperties.ContainsKey("width")) {
                             string width = computedProperties["width"];
                             if (width != "auto")
                                 run.Add(new XAttribute(PtOpenXml.HtmlToWmlCssWidth, width));
                             var rFontsLocal = run.Element(W.rFonts);
                             XElement rFontsGlobal = null;
                             var styleDefPart = wDoc.MainDocumentPart.StyleDefinitionsPart;
-                            if (styleDefPart != null)
-                            {
+                            if (styleDefPart != null) {
                                 rFontsGlobal = styleDefPart.GetXDocument().Root.Elements(W.docDefaults).Elements(W.rPrDefault).Elements(W.rPr).Elements(W.rFonts).FirstOrDefault();
                             }
                             var rFontsNew = FontMerge(rFontsLocal, rFontsGlobal);
                             var rPr = run.Element(W.rPr);
-                            if (rPr != null)
-                            {
+                            if (rPr != null) {
                                 var rFontsExisting = rPr.Element(W.rFonts);
                                 if (rFontsExisting == null)
                                     rPr.AddFirst(rFontsGlobal);
@@ -1010,8 +923,7 @@ namespace OpenXmlPowerTools.HtmlToWml
                 if (element.Name == XhtmlNoNamespace.sup)
                     return element.Nodes().Select(n => Transform(n, settings, wDoc, nextExpected, preserveWhiteSpace));
 
-                if (element.Name == XhtmlNoNamespace.table)
-                {
+                if (element.Name == XhtmlNoNamespace.table) {
                     XElement wmlTable = new XElement(W.tbl,
                         GetTableProperties(element),
                         GetTableGrid(element, settings),
@@ -1022,18 +934,15 @@ namespace OpenXmlPowerTools.HtmlToWml
                 if (element.Name == XhtmlNoNamespace.tbody)
                     return element.Nodes().Select(n => Transform(n, settings, wDoc, NextExpected.Paragraph, preserveWhiteSpace));
 
-                if (element.Name == XhtmlNoNamespace.td)
-                {
+                if (element.Name == XhtmlNoNamespace.td) {
                     var tdText = element.DescendantNodes().OfType<XText>().Select(t => t.Value).StringConcatenate().Trim();
                     var hasOtherThanSpansAndParas = element.Descendants().Any(d => d.Name != XhtmlNoNamespace.span && d.Name != XhtmlNoNamespace.p);
-                    if (tdText != "" || hasOtherThanSpansAndParas)
-                    {
+                    if (tdText != "" || hasOtherThanSpansAndParas) {
                         var newElementRaw = new XElement("dummy", element.Nodes().Select(n => Transform(n, settings, wDoc, NextExpected.Paragraph, preserveWhiteSpace)));
                         var newElements = new XElement("dummy",
                             newElementRaw
                             .Elements()
-                            .Select(e =>
-                            {
+                            .Select(e => {
                                 if (e.Name == W.hyperlink || e.Name == W.r)
                                     return new XElement(W.p, e);
                                 return e;
@@ -1042,9 +951,7 @@ namespace OpenXmlPowerTools.HtmlToWml
                         return new XElement(W.tc,
                             GetCellProperties(element),
                             newElements.Elements());
-                    }
-                    else
-                    {
+                    } else {
                         XElement p;
                         p = new XElement(W.p,
                             GetParagraphProperties(element, null, settings),
@@ -1056,15 +963,13 @@ namespace OpenXmlPowerTools.HtmlToWml
                     }
                 }
 
-                if (element.Name == XhtmlNoNamespace.th)
-                {
+                if (element.Name == XhtmlNoNamespace.th) {
                     return new XElement(W.tc,
                         GetCellHeaderProperties(element),
                         element.Nodes().Select(n => Transform(n, settings, wDoc, nextExpected, preserveWhiteSpace)));
                 }
 
-                if (element.Name == XhtmlNoNamespace.tr)
-                {
+                if (element.Name == XhtmlNoNamespace.tr) {
                     return new XElement(W.tr,
                         GetTableRowProperties(element),
                         element.Nodes().Select(n => Transform(n, settings, wDoc, nextExpected, preserveWhiteSpace)));
@@ -1077,14 +982,11 @@ namespace OpenXmlPowerTools.HtmlToWml
                     return element.Nodes().Select(n => Transform(n, settings, wDoc, nextExpected, preserveWhiteSpace));
 
                 if (element.Name == XhtmlNoNamespace.br)
-                    if (nextExpected == NextExpected.Paragraph)
-                    {
+                    if (nextExpected == NextExpected.Paragraph) {
                         return new XElement(W.p,
                             new XElement(W.r,
                                 new XElement(W.t)));
-                    }
-                    else
-                    {
+                    } else {
                         return new XElement(W.r, new XElement(W.br));
                     }
 
@@ -1105,8 +1007,7 @@ namespace OpenXmlPowerTools.HtmlToWml
 
         }
 
-        private static XElement FontMerge(XElement higherPriorityFont, XElement lowerPriorityFont)
-        {
+        private static XElement FontMerge(XElement higherPriorityFont, XElement lowerPriorityFont) {
             XElement rFonts;
 
             if (higherPriorityFont == null)
@@ -1136,8 +1037,7 @@ namespace OpenXmlPowerTools.HtmlToWml
             return rFonts;
         }
 
-        private static int? CalcWidthOfRunInPixels(XElement r)
-        {
+        private static int? CalcWidthOfRunInPixels(XElement r) {
             var fontName = (string)r.Attribute(PtOpenXml.FontName) ??
                (string)r.Ancestors(W.p).First().Attribute(PtOpenXml.FontName);
             if (fontName == null)
@@ -1160,12 +1060,9 @@ namespace OpenXmlPowerTools.HtmlToWml
 
             // in theory, all unknown fonts are found by the above test, but if not...
             FontFamily ff;
-            try
-            {
+            try {
                 ff = new FontFamily(fontName);
-            }
-            catch (ArgumentException)
-            {
+            } catch (ArgumentException) {
                 UnknownFonts.Add(fontName);
 
                 return 0;
@@ -1206,8 +1103,7 @@ namespace OpenXmlPowerTools.HtmlToWml
                 multiplier = 12;
             else if (runText.Length <= 32)
                 multiplier = 6;
-            if (multiplier != 1)
-            {
+            if (multiplier != 1) {
                 StringBuilder sb = new StringBuilder();
                 for (int i = 0; i < multiplier; i++)
                     sb.Append(runText);
@@ -1223,16 +1119,14 @@ namespace OpenXmlPowerTools.HtmlToWml
         // The implementer notes are at:
         // http://msdn.microsoft.com/en-us/library/ee908652.aspx
 
-        public enum FontType
-        {
+        public enum FontType {
             Ascii,
             HAnsi,
             EastAsia,
             CS
         };
 
-        public class CharStyleAttributes
-        {
+        public class CharStyleAttributes {
             public string AsciiFont;
             public string HAnsiFont;
             public string EastAsiaFont;
@@ -1247,32 +1141,26 @@ namespace OpenXmlPowerTools.HtmlToWml
             public Dictionary<XName, bool?> ToggleProperties;
             public Dictionary<XName, XElement> Properties;
 
-            public CharStyleAttributes(XElement pPr, XElement rPr)
-            {
+            public CharStyleAttributes(XElement pPr, XElement rPr) {
                 ToggleProperties = new Dictionary<XName, bool?>();
                 Properties = new Dictionary<XName, XElement>();
 
                 if (rPr == null)
                     return;
-                foreach (XName xn in TogglePropertyNames)
-                {
+                foreach (XName xn in TogglePropertyNames) {
                     ToggleProperties[xn] = Util.GetBoolProp(rPr, xn);
                 }
-                foreach (XName xn in PropertyNames)
-                {
+                foreach (XName xn in PropertyNames) {
                     Properties[xn] = GetXmlProperty(rPr, xn);
                 }
                 var rFonts = rPr.Element(W.rFonts);
-                if (rFonts == null)
-                {
+                if (rFonts == null) {
                     this.AsciiFont = null;
                     this.HAnsiFont = null;
                     this.EastAsiaFont = null;
                     this.CsFont = null;
                     this.Hint = null;
-                }
-                else
-                {
+                } else {
                     this.AsciiFont = (string)(rFonts.Attribute(W.ascii));
                     this.HAnsiFont = (string)(rFonts.Attribute(W.hAnsi));
                     this.EastAsiaFont = (string)(rFonts.Attribute(W.eastAsia));
@@ -1284,23 +1172,20 @@ namespace OpenXmlPowerTools.HtmlToWml
                 XElement rtlel = this.Properties[W.rtl];
                 bool rtl = rtlel != null && (rtlel.Attribute(W.val) == null || rtlel.Attribute(W.val).ToBoolean() == true);
                 var bidi = false;
-                if (pPr != null)
-                {
+                if (pPr != null) {
                     XElement bidiel = pPr.Element(W.bidi);
                     bidi = bidiel != null && (bidiel.Attribute(W.val) == null || bidiel.Attribute(W.val).ToBoolean() == true);
                 }
                 Rtl = cs || rtl || bidi;
                 var lang = rPr.Element(W.lang);
-                if (lang != null)
-                {
+                if (lang != null) {
                     LatinLang = (string)lang.Attribute(W.val);
                     BidiLang = (string)lang.Attribute(W.bidi);
                     EastAsiaLang = (string)lang.Attribute(W.eastAsia);
                 }
             }
 
-            private static XElement GetXmlProperty(XElement rPr, XName propertyName)
-            {
+            private static XElement GetXmlProperty(XElement rPr, XName propertyName) {
                 return rPr.Element(propertyName);
             }
 
@@ -1330,36 +1215,30 @@ namespace OpenXmlPowerTools.HtmlToWml
 
         }
 
-        public static FontType DetermineFontTypeFromCharacter(char ch, CharStyleAttributes csa)
-        {
+        public static FontType DetermineFontTypeFromCharacter(char ch, CharStyleAttributes csa) {
             // If the run has the cs element ("[ISO/IEC-29500-1] §17.3.2.7; cs") or the rtl element ("[ISO/IEC-29500-1] §17.3.2.30; rtl"),
             // then the cs (or cstheme if defined) font is used, regardless of the Unicode character values of the run’s content.
-            if (csa.Rtl)
-            {
+            if (csa.Rtl) {
                 return FontType.CS;
             }
 
             // A large percentage of characters will fall in the following rule.
 
             // Unicode Block: Basic Latin
-            if (ch >= 0x00 && ch <= 0x7f)
-            {
+            if (ch >= 0x00 && ch <= 0x7f) {
                 return FontType.Ascii;
             }
 
             // If the eastAsia (or eastAsiaTheme if defined) attribute’s value is “Times New Roman” and the ascii (or asciiTheme if defined)
             // and hAnsi (or hAnsiTheme if defined) attributes are equal, then the ascii (or asciiTheme if defined) font is used.
             if (csa.EastAsiaFont == "Times New Roman" &&
-                csa.AsciiFont == csa.HAnsiFont)
-            {
+                csa.AsciiFont == csa.HAnsiFont) {
                 return FontType.Ascii;
             }
 
             // Unicode BLock: Latin-1 Supplement
-            if (ch >= 0xA0 && ch <= 0xFF)
-            {
-                if (csa.Hint == "eastAsia")
-                {
+            if (ch >= 0xA0 && ch <= 0xFF) {
+                if (csa.Hint == "eastAsia") {
                     if (ch == 0xA1 ||
                         ch == 0xA4 ||
                         ch == 0xA7 ||
@@ -1371,21 +1250,18 @@ namespace OpenXmlPowerTools.HtmlToWml
                         (ch >= 0xB6 && ch <= 0xBA) ||
                         (ch >= 0xBC && ch <= 0xBF) ||
                         ch == 0xD7 ||
-                        ch == 0xF7)
-                    {
+                        ch == 0xF7) {
                         return FontType.EastAsia;
                     }
                     if (csa.EastAsiaLang == "zh-hant" ||
-                        csa.EastAsiaLang == "zh-hans")
-                    {
+                        csa.EastAsiaLang == "zh-hans") {
                         if (ch == 0xE0 ||
                             ch == 0xE1 ||
                             (ch >= 0xE8 && ch <= 0xEA) ||
                             (ch >= 0xEC && ch <= 0xED) ||
                             (ch >= 0xF2 && ch <= 0xF3) ||
                             (ch >= 0xF9 && ch <= 0xFA) ||
-                            ch == 0xFC)
-                        {
+                            ch == 0xFC) {
                             return FontType.EastAsia;
                         }
                     }
@@ -1394,14 +1270,11 @@ namespace OpenXmlPowerTools.HtmlToWml
             }
 
             // Unicode Block: Latin Extended-A
-            if (ch >= 0x0100 && ch <= 0x017F)
-            {
-                if (csa.Hint == "eastAsia")
-                {
+            if (ch >= 0x0100 && ch <= 0x017F) {
+                if (csa.Hint == "eastAsia") {
                     if (csa.EastAsiaLang == "zh-hant" ||
                         csa.EastAsiaLang == "zh-hans"
-                        /* || the character set of the east Asia (or east Asia theme) font is Chinese5 || GB2312 todo */)
-                    {
+                        /* || the character set of the east Asia (or east Asia theme) font is Chinese5 || GB2312 todo */) {
                         return FontType.EastAsia;
                     }
                 }
@@ -1409,14 +1282,11 @@ namespace OpenXmlPowerTools.HtmlToWml
             }
 
             // Unicode Block: Latin Extended-B
-            if (ch >= 0x0180 && ch <= 0x024F)
-            {
-                if (csa.Hint == "eastAsia")
-                {
+            if (ch >= 0x0180 && ch <= 0x024F) {
+                if (csa.Hint == "eastAsia") {
                     if (csa.EastAsiaLang == "zh-hant" ||
                         csa.EastAsiaLang == "zh-hans"
-                        /* || the character set of the east Asia (or east Asia theme) font is Chinese5 || GB2312 todo */)
-                    {
+                        /* || the character set of the east Asia (or east Asia theme) font is Chinese5 || GB2312 todo */) {
                         return FontType.EastAsia;
                     }
                 }
@@ -1424,14 +1294,11 @@ namespace OpenXmlPowerTools.HtmlToWml
             }
 
             // Unicode Block: IPA Extensions
-            if (ch >= 0x0250 && ch <= 0x02AF)
-            {
-                if (csa.Hint == "eastAsia")
-                {
+            if (ch >= 0x0250 && ch <= 0x02AF) {
+                if (csa.Hint == "eastAsia") {
                     if (csa.EastAsiaLang == "zh-hant" ||
                         csa.EastAsiaLang == "zh-hans"
-                        /* || the character set of the east Asia (or east Asia theme) font is Chinese5 || GB2312 todo */)
-                    {
+                        /* || the character set of the east Asia (or east Asia theme) font is Chinese5 || GB2312 todo */) {
                         return FontType.EastAsia;
                     }
                 }
@@ -1439,402 +1306,327 @@ namespace OpenXmlPowerTools.HtmlToWml
             }
 
             // Unicode Block: Spacing Modifier Letters
-            if (ch >= 0x02B0 && ch <= 0x02FF)
-            {
-                if (csa.Hint == "eastAsia")
-                {
+            if (ch >= 0x02B0 && ch <= 0x02FF) {
+                if (csa.Hint == "eastAsia") {
                     return FontType.EastAsia;
                 }
                 return FontType.HAnsi;
             }
 
             // Unicode Block: Combining Diacritic Marks
-            if (ch >= 0x0300 && ch <= 0x036F)
-            {
-                if (csa.Hint == "eastAsia")
-                {
+            if (ch >= 0x0300 && ch <= 0x036F) {
+                if (csa.Hint == "eastAsia") {
                     return FontType.EastAsia;
                 }
                 return FontType.HAnsi;
             }
 
             // Unicode Block: Greek
-            if (ch >= 0x0370 && ch <= 0x03CF)
-            {
-                if (csa.Hint == "eastAsia")
-                {
+            if (ch >= 0x0370 && ch <= 0x03CF) {
+                if (csa.Hint == "eastAsia") {
                     return FontType.EastAsia;
                 }
                 return FontType.HAnsi;
             }
 
             // Unicode Block: Cyrillic
-            if (ch >= 0x0400 && ch <= 0x04FF)
-            {
-                if (csa.Hint == "eastAsia")
-                {
+            if (ch >= 0x0400 && ch <= 0x04FF) {
+                if (csa.Hint == "eastAsia") {
                     return FontType.EastAsia;
                 }
                 return FontType.HAnsi;
             }
 
             // Unicode Block: Hebrew
-            if (ch >= 0x0590 && ch <= 0x05FF)
-            {
+            if (ch >= 0x0590 && ch <= 0x05FF) {
                 return FontType.Ascii;
             }
 
             // Unicode Block: Arabic
-            if (ch >= 0x0600 && ch <= 0x06FF)
-            {
+            if (ch >= 0x0600 && ch <= 0x06FF) {
                 return FontType.Ascii;
             }
 
             // Unicode Block: Syriac
-            if (ch >= 0x0700 && ch <= 0x074F)
-            {
+            if (ch >= 0x0700 && ch <= 0x074F) {
                 return FontType.Ascii;
             }
 
             // Unicode Block: Arabic Supplement
-            if (ch >= 0x0750 && ch <= 0x077F)
-            {
+            if (ch >= 0x0750 && ch <= 0x077F) {
                 return FontType.Ascii;
             }
 
             // Unicode Block: Thanna
-            if (ch >= 0x0780 && ch <= 0x07BF)
-            {
+            if (ch >= 0x0780 && ch <= 0x07BF) {
                 return FontType.Ascii;
             }
 
             // Unicode Block: Hangul Jamo
-            if (ch >= 0x1100 && ch <= 0x11FF)
-            {
+            if (ch >= 0x1100 && ch <= 0x11FF) {
                 return FontType.EastAsia;
             }
 
             // Unicode Block: Latin Extended Additional
-            if (ch >= 0x1E00 && ch <= 0x1EFF)
-            {
+            if (ch >= 0x1E00 && ch <= 0x1EFF) {
                 if (csa.Hint == "eastAsia" &&
                     (csa.EastAsiaLang == "zh-hant" ||
-                    csa.EastAsiaLang == "zh-hans"))
-                {
+                    csa.EastAsiaLang == "zh-hans")) {
                     return FontType.EastAsia;
                 }
                 return FontType.HAnsi;
             }
 
             // Unicode Block: General Punctuation
-            if (ch >= 0x2000 && ch <= 0x206F)
-            {
-                if (csa.Hint == "eastAsia")
-                {
+            if (ch >= 0x2000 && ch <= 0x206F) {
+                if (csa.Hint == "eastAsia") {
                     return FontType.EastAsia;
                 }
                 return FontType.HAnsi;
             }
 
             // Unicode Block: Superscripts and Subscripts
-            if (ch >= 0x2070 && ch <= 0x209F)
-            {
-                if (csa.Hint == "eastAsia")
-                {
+            if (ch >= 0x2070 && ch <= 0x209F) {
+                if (csa.Hint == "eastAsia") {
                     return FontType.EastAsia;
                 }
                 return FontType.HAnsi;
             }
 
             // Unicode Block: Currency Symbols
-            if (ch >= 0x20A0 && ch <= 0x20CF)
-            {
-                if (csa.Hint == "eastAsia")
-                {
+            if (ch >= 0x20A0 && ch <= 0x20CF) {
+                if (csa.Hint == "eastAsia") {
                     return FontType.EastAsia;
                 }
                 return FontType.HAnsi;
             }
 
             // Unicode Block: Combining Diacritical Marks for Symbols
-            if (ch >= 0x20D0 && ch <= 0x20FF)
-            {
-                if (csa.Hint == "eastAsia")
-                {
+            if (ch >= 0x20D0 && ch <= 0x20FF) {
+                if (csa.Hint == "eastAsia") {
                     return FontType.EastAsia;
                 }
                 return FontType.HAnsi;
             }
 
             // Unicode Block: Letter-like Symbols
-            if (ch >= 0x2100 && ch <= 0x214F)
-            {
-                if (csa.Hint == "eastAsia")
-                {
+            if (ch >= 0x2100 && ch <= 0x214F) {
+                if (csa.Hint == "eastAsia") {
                     return FontType.EastAsia;
                 }
                 return FontType.HAnsi;
             }
 
             // Unicode Block: Number Forms
-            if (ch >= 0x2150 && ch <= 0x218F)
-            {
-                if (csa.Hint == "eastAsia")
-                {
+            if (ch >= 0x2150 && ch <= 0x218F) {
+                if (csa.Hint == "eastAsia") {
                     return FontType.EastAsia;
                 }
                 return FontType.HAnsi;
             }
 
             // Unicode Block: Arrows
-            if (ch >= 0x2190 && ch <= 0x21FF)
-            {
-                if (csa.Hint == "eastAsia")
-                {
+            if (ch >= 0x2190 && ch <= 0x21FF) {
+                if (csa.Hint == "eastAsia") {
                     return FontType.EastAsia;
                 }
                 return FontType.HAnsi;
             }
 
             // Unicode Block: Mathematical Operators
-            if (ch >= 0x2200 && ch <= 0x22FF)
-            {
-                if (csa.Hint == "eastAsia")
-                {
+            if (ch >= 0x2200 && ch <= 0x22FF) {
+                if (csa.Hint == "eastAsia") {
                     return FontType.EastAsia;
                 }
                 return FontType.HAnsi;
             }
 
             // Unicode Block: Miscellaneous Technical
-            if (ch >= 0x2300 && ch <= 0x23FF)
-            {
-                if (csa.Hint == "eastAsia")
-                {
+            if (ch >= 0x2300 && ch <= 0x23FF) {
+                if (csa.Hint == "eastAsia") {
                     return FontType.EastAsia;
                 }
                 return FontType.HAnsi;
             }
 
             // Unicode Block: Control Pictures
-            if (ch >= 0x2400 && ch <= 0x243F)
-            {
-                if (csa.Hint == "eastAsia")
-                {
+            if (ch >= 0x2400 && ch <= 0x243F) {
+                if (csa.Hint == "eastAsia") {
                     return FontType.EastAsia;
                 }
                 return FontType.HAnsi;
             }
 
             // Unicode Block: Optical Character Recognition
-            if (ch >= 0x2440 && ch <= 0x245F)
-            {
-                if (csa.Hint == "eastAsia")
-                {
+            if (ch >= 0x2440 && ch <= 0x245F) {
+                if (csa.Hint == "eastAsia") {
                     return FontType.EastAsia;
                 }
                 return FontType.HAnsi;
             }
 
             // Unicode Block: Enclosed Alphanumerics
-            if (ch >= 0x2460 && ch <= 0x24FF)
-            {
-                if (csa.Hint == "eastAsia")
-                {
+            if (ch >= 0x2460 && ch <= 0x24FF) {
+                if (csa.Hint == "eastAsia") {
                     return FontType.EastAsia;
                 }
                 return FontType.HAnsi;
             }
 
             // Unicode Block: Box Drawing
-            if (ch >= 0x2500 && ch <= 0x257F)
-            {
-                if (csa.Hint == "eastAsia")
-                {
+            if (ch >= 0x2500 && ch <= 0x257F) {
+                if (csa.Hint == "eastAsia") {
                     return FontType.EastAsia;
                 }
                 return FontType.HAnsi;
             }
 
             // Unicode Block: Block Elements
-            if (ch >= 0x2580 && ch <= 0x259F)
-            {
-                if (csa.Hint == "eastAsia")
-                {
+            if (ch >= 0x2580 && ch <= 0x259F) {
+                if (csa.Hint == "eastAsia") {
                     return FontType.EastAsia;
                 }
                 return FontType.HAnsi;
             }
 
             // Unicode Block: Geometric Shapes
-            if (ch >= 0x25A0 && ch <= 0x25FF)
-            {
-                if (csa.Hint == "eastAsia")
-                {
+            if (ch >= 0x25A0 && ch <= 0x25FF) {
+                if (csa.Hint == "eastAsia") {
                     return FontType.EastAsia;
                 }
                 return FontType.HAnsi;
             }
 
             // Unicode Block: Miscellaneous Symbols
-            if (ch >= 0x2600 && ch <= 0x26FF)
-            {
-                if (csa.Hint == "eastAsia")
-                {
+            if (ch >= 0x2600 && ch <= 0x26FF) {
+                if (csa.Hint == "eastAsia") {
                     return FontType.EastAsia;
                 }
                 return FontType.HAnsi;
             }
 
             // Unicode Block: Dingbats
-            if (ch >= 0x2700 && ch <= 0x27BF)
-            {
-                if (csa.Hint == "eastAsia")
-                {
+            if (ch >= 0x2700 && ch <= 0x27BF) {
+                if (csa.Hint == "eastAsia") {
                     return FontType.EastAsia;
                 }
                 return FontType.HAnsi;
             }
 
             // Unicode Block: CJK Radicals Supplement
-            if (ch >= 0x2E80 && ch <= 0x2EFF)
-            {
-                if (csa.Hint == "eastAsia")
-                {
+            if (ch >= 0x2E80 && ch <= 0x2EFF) {
+                if (csa.Hint == "eastAsia") {
                     return FontType.EastAsia;
                 }
                 return FontType.HAnsi;
             }
 
             // Unicode Block: Kangxi Radicals
-            if (ch >= 0x2F00 && ch <= 0x2FDF)
-            {
+            if (ch >= 0x2F00 && ch <= 0x2FDF) {
                 return FontType.EastAsia;
             }
 
             // Unicode Block: Ideographic Description Characters
-            if (ch >= 0x2FF0 && ch <= 0x2FFF)
-            {
+            if (ch >= 0x2FF0 && ch <= 0x2FFF) {
                 return FontType.EastAsia;
             }
 
             // Unicode Block: CJK Symbols and Punctuation
-            if (ch >= 0x3000 && ch <= 0x303F)
-            {
+            if (ch >= 0x3000 && ch <= 0x303F) {
                 return FontType.EastAsia;
             }
 
             // Unicode Block: Hiragana
-            if (ch >= 0x3040 && ch <= 0x309F)
-            {
+            if (ch >= 0x3040 && ch <= 0x309F) {
                 return FontType.EastAsia;
             }
 
             // Unicode Block: Katakana
-            if (ch >= 0x30A0 && ch <= 0x30FF)
-            {
+            if (ch >= 0x30A0 && ch <= 0x30FF) {
                 return FontType.EastAsia;
             }
 
             // Unicode Block: Bopomofo
-            if (ch >= 0x3100 && ch <= 0x312F)
-            {
+            if (ch >= 0x3100 && ch <= 0x312F) {
                 return FontType.EastAsia;
             }
 
             // Unicode Block: Hangul Compatibility Jamo
-            if (ch >= 0x3130 && ch <= 0x318F)
-            {
+            if (ch >= 0x3130 && ch <= 0x318F) {
                 return FontType.EastAsia;
             }
 
             // Unicode Block: Kanbun
-            if (ch >= 0x3190 && ch <= 0x319F)
-            {
+            if (ch >= 0x3190 && ch <= 0x319F) {
                 return FontType.EastAsia;
             }
 
             // Unicode Block: Enclosed CJK Letters and Months
-            if (ch >= 0x3200 && ch <= 0x32FF)
-            {
+            if (ch >= 0x3200 && ch <= 0x32FF) {
                 return FontType.EastAsia;
             }
 
             // Unicode Block: CJK Compatibility
-            if (ch >= 0x3300 && ch <= 0x33FF)
-            {
+            if (ch >= 0x3300 && ch <= 0x33FF) {
                 return FontType.EastAsia;
             }
 
             // Unicode Block: CJK Unified Ideographs Extension A
-            if (ch >= 0x3400 && ch <= 0x4DBF)
-            {
+            if (ch >= 0x3400 && ch <= 0x4DBF) {
                 return FontType.EastAsia;
             }
 
             // Unicode Block: CJK Unified Ideographs
-            if (ch >= 0x4E00 && ch <= 0x9FAF)
-            {
+            if (ch >= 0x4E00 && ch <= 0x9FAF) {
                 return FontType.EastAsia;
             }
 
             // Unicode Block: Yi Syllables
-            if (ch >= 0xA000 && ch <= 0xA48F)
-            {
+            if (ch >= 0xA000 && ch <= 0xA48F) {
                 return FontType.EastAsia;
             }
 
             // Unicode Block: Yi Radicals
-            if (ch >= 0xA490 && ch <= 0xA4CF)
-            {
+            if (ch >= 0xA490 && ch <= 0xA4CF) {
                 return FontType.EastAsia;
             }
 
             // Unicode Block: Hangul Syllables
-            if (ch >= 0xAC00 && ch <= 0xD7AF)
-            {
+            if (ch >= 0xAC00 && ch <= 0xD7AF) {
                 return FontType.EastAsia;
             }
 
             // Unicode Block: High Surrogates
-            if (ch >= 0xD800 && ch <= 0xDB7F)
-            {
+            if (ch >= 0xD800 && ch <= 0xDB7F) {
                 return FontType.EastAsia;
             }
 
             // Unicode Block: High Private Use Surrogates
-            if (ch >= 0xDB80 && ch <= 0xDBFF)
-            {
+            if (ch >= 0xDB80 && ch <= 0xDBFF) {
                 return FontType.EastAsia;
             }
 
             // Unicode Block: Low Surrogates
-            if (ch >= 0xDC00 && ch <= 0xDFFF)
-            {
+            if (ch >= 0xDC00 && ch <= 0xDFFF) {
                 return FontType.EastAsia;
             }
 
             // Unicode Block: Private Use Area
-            if (ch >= 0xE000 && ch <= 0xF8FF)
-            {
-                if (csa.Hint == "eastAsia")
-                {
+            if (ch >= 0xE000 && ch <= 0xF8FF) {
+                if (csa.Hint == "eastAsia") {
                     return FontType.EastAsia;
                 }
                 return FontType.HAnsi;
             }
 
             // Unicode Block: CJK Compatibility Ideographs
-            if (ch >= 0xF900 && ch <= 0xFAFF)
-            {
+            if (ch >= 0xF900 && ch <= 0xFAFF) {
                 return FontType.EastAsia;
             }
 
             // Unicode Block: Alphabetic Presentation Forms
-            if (ch >= 0xFB00 && ch <= 0xFB4F)
-            {
-                if (csa.Hint == "eastAsia")
-                {
+            if (ch >= 0xFB00 && ch <= 0xFB4F) {
+                if (csa.Hint == "eastAsia") {
                     if (ch >= 0xFB00 && ch <= 0xFB1C)
                         return FontType.EastAsia;
                     if (ch >= 0xFB1D && ch <= 0xFB4F)
@@ -1844,32 +1636,27 @@ namespace OpenXmlPowerTools.HtmlToWml
             }
 
             // Unicode Block: Arabic Presentation Forms-A
-            if (ch >= 0xFB50 && ch <= 0xFDFF)
-            {
+            if (ch >= 0xFB50 && ch <= 0xFDFF) {
                 return FontType.Ascii;
             }
 
             // Unicode Block: CJK Compatibility Forms
-            if (ch >= 0xFE30 && ch <= 0xFE4F)
-            {
+            if (ch >= 0xFE30 && ch <= 0xFE4F) {
                 return FontType.EastAsia;
             }
 
             // Unicode Block: Small Form Variants
-            if (ch >= 0xFE50 && ch <= 0xFE6F)
-            {
+            if (ch >= 0xFE50 && ch <= 0xFE6F) {
                 return FontType.EastAsia;
             }
 
             // Unicode Block: Arabic Presentation Forms-B
-            if (ch >= 0xFE70 && ch <= 0xFEFE)
-            {
+            if (ch >= 0xFE70 && ch <= 0xFEFE) {
                 return FontType.Ascii;
             }
 
             // Unicode Block: Halfwidth and Fullwidth Forms
-            if (ch >= 0xFF00 && ch <= 0xFFEF)
-            {
+            if (ch >= 0xFF00 && ch <= 0xFFEF) {
                 return FontType.EastAsia;
             }
             return FontType.HAnsi;
@@ -1878,12 +1665,9 @@ namespace OpenXmlPowerTools.HtmlToWml
         private static readonly HashSet<string> UnknownFonts = new HashSet<string>();
         private static HashSet<string> _knownFamilies;
 
-        private static HashSet<string> KnownFamilies
-        {
-            get
-            {
-                if (_knownFamilies == null)
-                {
+        private static HashSet<string> KnownFamilies {
+            get {
+                if (_knownFamilies == null) {
                     _knownFamilies = new HashSet<string>();
                     var families = FontFamily.Families;
                     foreach (var fam in families)
@@ -1994,8 +1778,7 @@ namespace OpenXmlPowerTools.HtmlToWml
             '\x06F9',
         };
 
-        private static void AdjustFontAttributes(WordprocessingDocument wDoc, XElement paraOrRun, XElement pPr, XElement rPr)
-        {
+        private static void AdjustFontAttributes(WordprocessingDocument wDoc, XElement paraOrRun, XElement pPr, XElement rPr) {
             XDocument themeXDoc = null;
             if (wDoc.MainDocumentPart.ThemePart != null)
                 themeXDoc = wDoc.MainDocumentPart.ThemePart.GetXDocument();
@@ -2003,15 +1786,13 @@ namespace OpenXmlPowerTools.HtmlToWml
             XElement fontScheme = null;
             XElement majorFont = null;
             XElement minorFont = null;
-            if (themeXDoc != null)
-            {
+            if (themeXDoc != null) {
                 fontScheme = themeXDoc.Root.Element(A.themeElements).Element(A.fontScheme);
                 majorFont = fontScheme.Element(A.majorFont);
                 minorFont = fontScheme.Element(A.minorFont);
             }
             var rFonts = rPr.Element(W.rFonts);
-            if (rFonts == null)
-            {
+            if (rFonts == null) {
                 return;
             }
             var asciiTheme = (string)rFonts.Attribute(W.asciiTheme);
@@ -2028,76 +1809,54 @@ namespace OpenXmlPowerTools.HtmlToWml
             XElement majorLatin = null;
             string majorLatinTypeface = null;
 
-            if (minorFont != null)
-            {
+            if (minorFont != null) {
                 minorLatin = minorFont.Element(A.latin);
                 minorLatinTypeface = (string)minorLatin.Attribute("typeface");
             }
 
-            if (majorFont != null)
-            {
+            if (majorFont != null) {
                 majorLatin = majorFont.Element(A.latin);
                 majorLatinTypeface = (string)majorLatin.Attribute("typeface");
             }
-            if (asciiTheme != null)
-            {
-                if (asciiTheme.StartsWith("minor") && minorLatinTypeface != null)
-                {
+            if (asciiTheme != null) {
+                if (asciiTheme.StartsWith("minor") && minorLatinTypeface != null) {
                     ascii = minorLatinTypeface;
-                }
-                else if (asciiTheme.StartsWith("major") && majorLatinTypeface != null)
-                {
+                } else if (asciiTheme.StartsWith("major") && majorLatinTypeface != null) {
                     ascii = majorLatinTypeface;
                 }
             }
-            if (hAnsiTheme != null)
-            {
-                if (hAnsiTheme.StartsWith("minor") && minorLatinTypeface != null)
-                {
+            if (hAnsiTheme != null) {
+                if (hAnsiTheme.StartsWith("minor") && minorLatinTypeface != null) {
                     hAnsi = minorLatinTypeface;
-                }
-                else if (hAnsiTheme.StartsWith("major") && majorLatinTypeface != null)
-                {
+                } else if (hAnsiTheme.StartsWith("major") && majorLatinTypeface != null) {
                     hAnsi = majorLatinTypeface;
                 }
             }
-            if (eastAsiaTheme != null)
-            {
-                if (eastAsiaTheme.StartsWith("minor") && minorLatinTypeface != null)
-                {
+            if (eastAsiaTheme != null) {
+                if (eastAsiaTheme.StartsWith("minor") && minorLatinTypeface != null) {
                     eastAsia = minorLatinTypeface;
-                }
-                else if (eastAsiaTheme.StartsWith("major") && majorLatinTypeface != null)
-                {
+                } else if (eastAsiaTheme.StartsWith("major") && majorLatinTypeface != null) {
                     eastAsia = majorLatinTypeface;
                 }
             }
-            if (cstheme != null)
-            {
-                if (cstheme.StartsWith("minor") && minorFont != null)
-                {
+            if (cstheme != null) {
+                if (cstheme.StartsWith("minor") && minorFont != null) {
                     cs = (string)minorFont.Element(A.cs).Attribute("typeface");
-                }
-                else if (cstheme.StartsWith("major") && majorFont != null)
-                {
+                } else if (cstheme.StartsWith("major") && majorFont != null) {
                     cs = (string)majorFont.Element(A.cs).Attribute("typeface");
                 }
             }
 
-            if (ascii != null)
-            {
+            if (ascii != null) {
                 rFonts.SetAttributeValue(W.ascii, ascii);
             }
-            if (hAnsi != null)
-            {
+            if (hAnsi != null) {
                 rFonts.SetAttributeValue(W.hAnsi, hAnsi);
             }
-            if (eastAsia != null)
-            {
+            if (eastAsia != null) {
                 rFonts.SetAttributeValue(W.eastAsia, eastAsia);
             }
-            if (cs != null)
-            {
+            if (cs != null) {
                 rFonts.SetAttributeValue(W.cs, cs);
             }
 
@@ -2148,8 +1907,7 @@ namespace OpenXmlPowerTools.HtmlToWml
             var ft = DetermineFontTypeFromCharacter(charToExamine, csa);
             string fontType = null;
             string languageType = null;
-            switch (ft)
-            {
+            switch (ft) {
                 case FontType.Ascii:
                     fontType = (string)rFonts.Attribute(W.ascii);
                     languageType = "western";
@@ -2168,48 +1926,36 @@ namespace OpenXmlPowerTools.HtmlToWml
                     break;
             }
 
-            if (fontType != null)
-            {
-                if (paraOrRun.Attribute(PtOpenXml.FontName) == null)
-                {
+            if (fontType != null) {
+                if (paraOrRun.Attribute(PtOpenXml.FontName) == null) {
                     XAttribute fta = new XAttribute(PtOpenXml.FontName, fontType.ToString());
                     paraOrRun.Add(fta);
-                }
-                else
-                {
+                } else {
                     paraOrRun.Attribute(PtOpenXml.FontName).Value = fontType.ToString();
                 }
             }
-            if (languageType != null)
-            {
-                if (paraOrRun.Attribute(PtOpenXml.LanguageType) == null)
-                {
+            if (languageType != null) {
+                if (paraOrRun.Attribute(PtOpenXml.LanguageType) == null) {
                     XAttribute lta = new XAttribute(PtOpenXml.LanguageType, languageType);
                     paraOrRun.Add(lta);
-                }
-                else
-                {
+                } else {
                     paraOrRun.Attribute(PtOpenXml.LanguageType).Value = languageType;
                 }
             }
         }
 
-        private static decimal? GetFontSize(XElement e)
-        {
+        private static decimal? GetFontSize(XElement e) {
             var languageType = (string)e.Attribute(PtOpenXml.LanguageType);
-            if (e.Name == W.p)
-            {
+            if (e.Name == W.p) {
                 return GetFontSize(languageType, e.Elements(W.pPr).Elements(W.rPr).FirstOrDefault());
             }
-            if (e.Name == W.r)
-            {
+            if (e.Name == W.r) {
                 return GetFontSize(languageType, e.Element(W.rPr));
             }
             return null;
         }
 
-        private static decimal? GetFontSize(string languageType, XElement rPr)
-        {
+        private static decimal? GetFontSize(string languageType, XElement rPr) {
             if (rPr == null) return null;
             return languageType == "bidi"
                 ? (decimal?)rPr.Elements(W.szCs).Attributes(W.val).FirstOrDefault()
@@ -2218,28 +1964,21 @@ namespace OpenXmlPowerTools.HtmlToWml
 
         private static int NextRectId = 1025;
 
-        private static int GetNextRectId()
-        {
+        private static int GetNextRectId() {
             return NextRectId++;
         }
 
         private static object GenerateNextExpected(XNode node, HtmlToWmlConverterSettings settings, WordprocessingDocument wDoc,
-            string styleName, NextExpected nextExpected, bool preserveWhiteSpace)
-        {
-            if (nextExpected == NextExpected.Paragraph)
-            {
+            string styleName, NextExpected nextExpected, bool preserveWhiteSpace) {
+            if (nextExpected == NextExpected.Paragraph) {
                 XElement element = node as XElement;
-                if (element != null)
-                {
+                if (element != null) {
                     return new XElement(W.p,
                         GetParagraphProperties(element, styleName, settings),
                         element.Nodes().Select(n => Transform(n, settings, wDoc, NextExpected.Run, preserveWhiteSpace)));
-                }
-                else
-                {
+                } else {
                     XText xTextNode = node as XText;
-                    if (xTextNode != null)
-                    {
+                    if (xTextNode != null) {
                         string textNodeString = GetDisplayText(xTextNode, preserveWhiteSpace);
                         XElement p;
                         p = new XElement(W.p,
@@ -2253,16 +1992,11 @@ namespace OpenXmlPowerTools.HtmlToWml
                     }
                     return null;
                 }
-            }
-            else
-            {
+            } else {
                 XElement element = node as XElement;
-                if (element != null)
-                {
+                if (element != null) {
                     return element.Nodes().Select(n => Transform(n, settings, wDoc, nextExpected, preserveWhiteSpace));
-                }
-                else
-                {
+                } else {
                     string textNodeString = GetDisplayText((XText)node, preserveWhiteSpace);
                     XElement rPr = GetRunProperties((XText)node, settings);
                     XElement r = new XElement(W.r,
@@ -2275,35 +2009,27 @@ namespace OpenXmlPowerTools.HtmlToWml
             }
         }
 
-        private static XElement TransformImageToWml(XElement element, HtmlToWmlConverterSettings settings, WordprocessingDocument wDoc)
-        {
+        private static XElement TransformImageToWml(XElement element, HtmlToWmlConverterSettings settings, WordprocessingDocument wDoc) {
             string srcAttribute = (string)element.Attribute(XhtmlNoNamespace.src);
             byte[] ba = null;
             Bitmap bmp = null;
 
-            if (srcAttribute.StartsWith("data:"))
-            {
+            if (srcAttribute.StartsWith("data:")) {
                 var semiIndex = srcAttribute.IndexOf(';');
                 var commaIndex = srcAttribute.IndexOf(',', semiIndex);
                 var base64 = srcAttribute.Substring(commaIndex + 1);
                 ba = Convert.FromBase64String(base64);
-                using (MemoryStream ms = new MemoryStream(ba))
-                {
+                using (MemoryStream ms = new MemoryStream(ba)) {
                     bmp = new Bitmap(ms);
                 }
-            }
-            else
-            {
-                try
-                {
-                    bmp = new Bitmap(settings.BaseUriForImages + "/" + srcAttribute);
-                }
-                catch (ArgumentException)
-                {
+            } else {
+                try {
+                    string fullPath = $"{settings.BaseUriForImages}/{srcAttribute}".Replace("//", "/");
+                    // Console.Error.WriteLine($"TransformImageToWml srcAttribute={srcAttribute}, fullPath={fullPath}");
+                    bmp = new Bitmap(fullPath);
+                } catch (ArgumentException) {
                     return null;
-                }
-                catch (NotSupportedException)
-                {
+                } catch (NotSupportedException) {
                     return null;
                 }
                 MemoryStream ms = new MemoryStream();
@@ -2319,10 +2045,8 @@ namespace OpenXmlPowerTools.HtmlToWml
                 s.Write(ba, 0, ba.GetUpperBound(0) + 1);
 
             PictureId pid = wDoc.Annotation<PictureId>();
-            if (pid == null)
-            {
-                pid = new PictureId
-                {
+            if (pid == null) {
+                pid = new PictureId {
                     Id = 1,
                 };
                 wDoc.AddAnnotation(pid);
@@ -2333,16 +2057,14 @@ namespace OpenXmlPowerTools.HtmlToWml
             string pictureDescription = "Picture " + pictureId.ToString();
 
             string floatValue = element.GetProp("float").ToString();
-            if (floatValue == "none")
-            {
+            if (floatValue == "none") {
                 XElement run = new XElement(W.r,
                     GetRunPropertiesForImage(),
                     new XElement(W.drawing,
                         GetImageAsInline(element, settings, wDoc, bmp, rId, pictureId, pictureDescription)));
                 return run;
             }
-            if (floatValue == "left" || floatValue == "right")
-            {
+            if (floatValue == "left" || floatValue == "right") {
                 XElement run = new XElement(W.r,
                     GetRunPropertiesForImage(),
                     new XElement(W.drawing,
@@ -2353,8 +2075,7 @@ namespace OpenXmlPowerTools.HtmlToWml
         }
 
         private static XElement GetImageAsInline(XElement element, HtmlToWmlConverterSettings settings, WordprocessingDocument wDoc, Bitmap bmp,
-            string rId, int pictureId, string pictureDescription)
-        {
+            string rId, int pictureId, string pictureDescription) {
             XElement inline = new XElement(WP.inline, // 20.4.2.8
                 new XAttribute(XNamespace.Xmlns + "wp", WP.wp.NamespaceName),
                 new XAttribute(NoNamespace.distT, 0),  // distance from top of image to text, in EMUs, no effect if the parent is inline
@@ -2370,8 +2091,7 @@ namespace OpenXmlPowerTools.HtmlToWml
         }
 
         private static XElement GetImageAsAnchor(XElement element, HtmlToWmlConverterSettings settings, WordprocessingDocument wDoc, Bitmap bmp,
-            string rId, string floatValue, int pictureId, string pictureDescription)
-        {
+            string rId, string floatValue, int pictureId, string pictureDescription) {
             Emu minDistFromEdge = (long)(0.125 * Emu.s_EmusPerInch);
             long relHeight = 251658240;  // z-order
 
@@ -2398,16 +2118,13 @@ namespace OpenXmlPowerTools.HtmlToWml
                 marginRightInEmus = (Emu)marginRightProp;
 
             Emu relativeFromColumn = 0;
-            if (floatValue == "left")
-            {
+            if (floatValue == "left") {
                 relativeFromColumn = marginLeftInEmus;
                 CssExpression parentMarginLeft = element.Parent.GetProp("margin-left");
                 if (parentMarginLeft.IsNotAuto)
                     relativeFromColumn += (long)(Emu)parentMarginLeft;
                 marginRightInEmus = Math.Max(marginRightInEmus, minDistFromEdge);
-            }
-            else if (floatValue == "right")
-            {
+            } else if (floatValue == "right") {
                 Emu printWidth = (long)settings.PageWidthEmus - (long)settings.PageMarginLeftEmus - (long)settings.PageMarginRightEmus;
                 SizeEmu sl = GetImageSizeInEmus(element, bmp);
                 relativeFromColumn = printWidth - sl.m_Width;
@@ -2539,19 +2256,16 @@ namespace OpenXmlPowerTools.HtmlToWml
           </wp:anchor>
 #endif
 
-        private static XElement GetParagraphPropertiesForImage()
-        {
+        private static XElement GetParagraphPropertiesForImage() {
             return null;
         }
 
-        private static XElement GetRunPropertiesForImage()
-        {
+        private static XElement GetRunPropertiesForImage() {
             return new XElement(W.rPr,
                 new XElement(W.noProof));
         }
 
-        private static SizeEmu GetImageSizeInEmus(XElement img, Bitmap bmp)
-        {
+        private static SizeEmu GetImageSizeInEmus(XElement img, Bitmap bmp) {
             double hres = bmp.HorizontalResolution;
             double vres = bmp.VerticalResolution;
             Size s = bmp.Size;
@@ -2560,39 +2274,34 @@ namespace OpenXmlPowerTools.HtmlToWml
 
             CssExpression width = img.GetProp("width");
             CssExpression height = img.GetProp("height");
-            if (width.IsNotAuto && height.IsAuto)
-            {
+            if (width.IsNotAuto && height.IsAuto) {
                 Emu widthInEmus = (Emu)width;
                 double percentChange = (float)widthInEmus / (float)cx;
                 cx = widthInEmus;
                 cy = (long)(cy * percentChange);
                 return new SizeEmu(cx, cy);
             }
-            if (width.IsAuto && height.IsNotAuto)
-            {
+            if (width.IsAuto && height.IsNotAuto) {
                 Emu heightInEmus = (Emu)height;
                 double percentChange = (float)heightInEmus / (float)cy;
                 cy = heightInEmus;
                 cx = (long)(cx * percentChange);
                 return new SizeEmu(cx, cy);
             }
-            if (width.IsNotAuto && height.IsNotAuto)
-            {
+            if (width.IsNotAuto && height.IsNotAuto) {
                 return new SizeEmu((Emu)width, (Emu)height);
             }
             return new SizeEmu(cx, cy);
         }
 
-        private static XElement GetImageExtent(XElement img, Bitmap bmp)
-        {
+        private static XElement GetImageExtent(XElement img, Bitmap bmp) {
             SizeEmu szEmu = GetImageSizeInEmus(img, bmp);
             return new XElement(WP.extent,
                 new XAttribute(NoNamespace.cx, (long)szEmu.m_Width),   // in EMUs
                 new XAttribute(NoNamespace.cy, (long)szEmu.m_Height)); // in EMUs
         }
 
-        private static XElement GetEffectExtent()
-        {
+        private static XElement GetEffectExtent() {
             return new XElement(WP.effectExtent,
                 new XAttribute(NoNamespace.l, 0),
                 new XAttribute(NoNamespace.t, 0),
@@ -2600,24 +2309,21 @@ namespace OpenXmlPowerTools.HtmlToWml
                 new XAttribute(NoNamespace.b, 0));
         }
 
-        private static XElement GetDocPr(XElement element, int pictureId, string pictureDescription)
-        {
+        private static XElement GetDocPr(XElement element, int pictureId, string pictureDescription) {
             return new XElement(WP.docPr,
                 new XAttribute(NoNamespace.id, pictureId),
                 new XAttribute(NoNamespace.name, pictureDescription),
                 new XAttribute(NoNamespace.descr, (string)element.Attribute(NoNamespace.src)));
         }
 
-        private static XElement GetCNvGraphicFramePr()
-        {
+        private static XElement GetCNvGraphicFramePr() {
             return new XElement(WP.cNvGraphicFramePr,
                 new XElement(A.graphicFrameLocks,
                     new XAttribute(XNamespace.Xmlns + "a", A.a.NamespaceName),
                     new XAttribute(NoNamespace.noChangeAspect, 1)));
         }
 
-        private static XElement GetGraphicForImage(XElement element, string rId, Bitmap bmp, int pictureId, string pictureDescription)
-        {
+        private static XElement GetGraphicForImage(XElement element, string rId, Bitmap bmp, int pictureId, string pictureDescription) {
             SizeEmu szEmu = GetImageSizeInEmus(element, bmp);
             XElement graphic = new XElement(A.graphic,
                 new XAttribute(XNamespace.Xmlns + "a", A.a.NamespaceName),
@@ -2697,8 +2403,7 @@ namespace OpenXmlPowerTools.HtmlToWml
               </a:graphicData>
             </a:graphic>
 #endif
-        private static XElement GetParagraphProperties(XElement blockLevelElement, string styleName, HtmlToWmlConverterSettings settings)
-        {
+        private static XElement GetParagraphProperties(XElement blockLevelElement, string styleName, HtmlToWmlConverterSettings settings) {
             XElement paragraphMarkRunProperties = GetRunProperties(blockLevelElement, settings);
             XElement backgroundProperty = GetBackgroundProperty(blockLevelElement);
             XElement[] spacingProperty = GetSpacingProperties(blockLevelElement, settings); // spacing, ind, contextualSpacing
@@ -2731,8 +2436,7 @@ namespace OpenXmlPowerTools.HtmlToWml
         // this could be possible.  I am pretty sure that this is not worth the effort.
 
         // Returns the spacing, ind, and contextualSpacing elements
-        private static XElement[] GetSpacingProperties(XElement paragraph, HtmlToWmlConverterSettings settings)
-        {
+        private static XElement[] GetSpacingProperties(XElement paragraph, HtmlToWmlConverterSettings settings) {
             CssExpression marginLeftProperty = paragraph.GetProp("margin-left");
             CssExpression marginRightProperty = paragraph.GetProp("margin-right");
             CssExpression marginTopProperty = paragraph.GetProp("margin-top");
@@ -2761,39 +2465,34 @@ namespace OpenXmlPowerTools.HtmlToWml
             if (rightPaddingProperty != null)
                 rightIndent += (Twip)rightPaddingProperty;
 
-            if (paragraph.Name == XhtmlNoNamespace.li)
-            {
+            if (paragraph.Name == XhtmlNoNamespace.li) {
                 leftIndent += 180;
                 rightIndent += 180;
             }
             XElement listElement = null;
             NumberedItemAnnotation numberedItemAnnotation = null;
             listElement = paragraph.Ancestors().FirstOrDefault(a => a.Name == XhtmlNoNamespace.ol || a.Name == XhtmlNoNamespace.ul);
-            if (listElement != null)
-            {
+            if (listElement != null) {
                 numberedItemAnnotation = listElement.Annotation<NumberedItemAnnotation>();
                 leftIndent += 600 * (numberedItemAnnotation.ilvl + 1);
             }
 
             int blockQuoteCount = paragraph.Ancestors(XhtmlNoNamespace.blockquote).Count();
             leftIndent += blockQuoteCount * 720;
-            if (blockQuoteCount == 0)
-            {
+            if (blockQuoteCount == 0) {
                 if (marginLeftProperty != null && marginLeftProperty.IsNotAuto && marginLeftProperty.IsNotNormal)
                     leftIndent += (Twip)marginLeftProperty;
                 if (marginRightProperty != null && marginRightProperty.IsNotAuto && marginRightProperty.IsNotNormal)
                     rightIndent += (Twip)marginRightProperty;
             }
             CssExpression textIndentProperty = paragraph.GetProp("text-indent");
-            if (textIndentProperty != null)
-            {
+            if (textIndentProperty != null) {
                 Twip twips = (Twip)textIndentProperty;
                 firstLine = twips;
             }
 
             XElement ind = null;
-            if (leftIndent > 0 || rightIndent > 0 || firstLine != 0)
-            {
+            if (leftIndent > 0 || rightIndent > 0 || firstLine != 0) {
                 if (firstLine < 0)
                     ind = new XElement(W.ind,
                         leftIndent != 0 ? new XAttribute(W.left, (long)leftIndent) : null,
@@ -2816,8 +2515,7 @@ namespace OpenXmlPowerTools.HtmlToWml
             long? before = null;
             long? after = null;
 
-            if (paragraph.Name == XhtmlNoNamespace.td || paragraph.Name == XhtmlNoNamespace.th || paragraph.Name == XhtmlNoNamespace.caption)
-            {
+            if (paragraph.Name == XhtmlNoNamespace.td || paragraph.Name == XhtmlNoNamespace.th || paragraph.Name == XhtmlNoNamespace.caption) {
                 line = (long)settings.DefaultSpacingElementForParagraphsInTables.Attribute(W.line);
                 lineRule = (string)settings.DefaultSpacingElementForParagraphsInTables.Attribute(W.lineRule);
                 before = (long?)settings.DefaultSpacingElementForParagraphsInTables.Attribute(W.before);
@@ -2833,18 +2531,15 @@ namespace OpenXmlPowerTools.HtmlToWml
                 beforeAutospacing = "1";
             if (numItem && marginBottomProperty.IsAuto)
                 afterAutospacing = "1";
-            if (marginTopProperty != null && marginTopProperty.IsNotAuto)
-            {
+            if (marginTopProperty != null && marginTopProperty.IsNotAuto) {
                 before = (long)(Twip)marginTopProperty;
                 beforeAutospacing = "0";
             }
-            if (marginBottomProperty != null && marginBottomProperty.IsNotAuto)
-            {
+            if (marginBottomProperty != null && marginBottomProperty.IsNotAuto) {
                 after = (long)(Twip)marginBottomProperty;
                 afterAutospacing = "0";
             }
-            if (lineHeightProperty != null && lineHeightProperty.IsNotAuto && lineHeightProperty.IsNotNormal)
-            {
+            if (lineHeightProperty != null && lineHeightProperty.IsNotAuto && lineHeightProperty.IsNotNormal) {
                 // line is in twips if lineRule == "atLeast"
                 line = (long)(Twip)lineHeightProperty;
                 lineRule = "atLeast";
@@ -2862,16 +2557,13 @@ namespace OpenXmlPowerTools.HtmlToWml
             // contextualSpacing
 
             XElement contextualSpacing = null;
-            if (paragraph.Name == XhtmlNoNamespace.li)
-            {
+            if (paragraph.Name == XhtmlNoNamespace.li) {
                 NumberedItemAnnotation thisNumberedItemAnnotation = null;
                 XElement listElement2 = paragraph.Ancestors().FirstOrDefault(a => a.Name == XhtmlNoNamespace.ol || a.Name == XhtmlNoNamespace.ul);
-                if (listElement2 != null)
-                {
+                if (listElement2 != null) {
                     thisNumberedItemAnnotation = listElement2.Annotation<NumberedItemAnnotation>();
                     XElement next = paragraph.ElementsAfterSelf().FirstOrDefault();
-                    if (next != null && next.Name == XhtmlNoNamespace.li)
-                    {
+                    if (next != null && next.Name == XhtmlNoNamespace.li) {
                         XElement nextListElement = next.Ancestors().FirstOrDefault(a => a.Name == XhtmlNoNamespace.ol || a.Name == XhtmlNoNamespace.ul);
                         NumberedItemAnnotation nextNumberedItemAnnotation = nextListElement.Annotation<NumberedItemAnnotation>();
                         if (nextNumberedItemAnnotation != null && thisNumberedItemAnnotation.numId == nextNumberedItemAnnotation.numId)
@@ -2883,15 +2575,13 @@ namespace OpenXmlPowerTools.HtmlToWml
             return new XElement[] { spacing, ind, contextualSpacing };
         }
 
-        private static XElement GetRunProperties(XText textNode, HtmlToWmlConverterSettings settings)
-        {
+        private static XElement GetRunProperties(XText textNode, HtmlToWmlConverterSettings settings) {
             XElement parent = textNode.Parent;
             XElement rPr = GetRunProperties(parent, settings);
             return rPr;
         }
 
-        private static XElement GetRunProperties(XElement element, HtmlToWmlConverterSettings settings)
-        {
+        private static XElement GetRunProperties(XElement element, HtmlToWmlConverterSettings settings) {
             CssExpression colorProperty = element.GetProp("color");
             CssExpression fontFamilyProperty = element.GetProp("font-family");
             CssExpression fontSizeProperty = element.GetProp("font-size");
@@ -2937,11 +2627,10 @@ namespace OpenXmlPowerTools.HtmlToWml
                 subSuper = new XElement(W.vertAlign, new XAttribute(W.val, "subscript"));
             else
                 if (supAncestor)
-                    subSuper = new XElement(W.vertAlign, new XAttribute(W.val, "superscript"));
+                subSuper = new XElement(W.vertAlign, new XAttribute(W.val, "superscript"));
 
             XElement rFonts = null;
-            if (fontFamilyString != null)
-            {
+            if (fontFamilyString != null) {
                 rFonts = new XElement(W.rFonts,
                     fontFamilyString != settings.MinorLatinFont ? new XAttribute(W.ascii, fontFamilyString) : null,
                     fontFamilyString != settings.MajorLatinFont ? new XAttribute(W.hAnsi, fontFamilyString) : null,
@@ -2954,8 +2643,7 @@ namespace OpenXmlPowerTools.HtmlToWml
 
             XElement sz = null;
             XElement szCs = null;
-            if (fontSizeTPoint != null)
-            {
+            if (fontSizeTPoint != null) {
                 sz = new XElement(W.sz, new XAttribute(W.val, (int)((double)fontSizeTPoint * 2)));
                 szCs = new XElement(W.szCs, new XAttribute(W.val, (int)((double)fontSizeTPoint * 2)));
             }
@@ -2966,16 +2654,14 @@ namespace OpenXmlPowerTools.HtmlToWml
 
             XElement bold = null;
             XElement boldCs = null;
-            if (bAncestor || strongAncestor || fontWeightString == "bold" || fontWeightString == "bolder" || fontWeightString == "600" || fontWeightString == "700" || fontWeightString == "800" || fontWeightString == "900")
-            {
+            if (bAncestor || strongAncestor || fontWeightString == "bold" || fontWeightString == "bolder" || fontWeightString == "600" || fontWeightString == "700" || fontWeightString == "800" || fontWeightString == "900") {
                 bold = new XElement(W.b);
                 boldCs = new XElement(W.bCs);
             }
 
             XElement italic = null;
             XElement italicCs = null;
-            if (iAncestor || emAncestor || fontStyleString == "italic")
-            {
+            if (iAncestor || emAncestor || fontStyleString == "italic") {
                 italic = new XElement(W.i);
                 italicCs = new XElement(W.iCs);
             }
@@ -3025,8 +2711,7 @@ namespace OpenXmlPowerTools.HtmlToWml
         // todo this is not right - needs to be rationalized for all characters in an entire paragraph.
         // if there is text like <p>abc <em> def </em> ghi</p> then there needs to be just one space between abc and def, and between
         // def and ghi.
-        private static string GetDisplayText(XText node, bool preserveWhiteSpace)
-        {
+        private static string GetDisplayText(XText node, bool preserveWhiteSpace) {
             string textTransform = node.Parent.GetProp("text-transform").ToString();
             bool isFirst = node.Parent.Name == XhtmlNoNamespace.p && node == node.Parent.FirstNode;
             bool isLast = node.Parent.Name == XhtmlNoNamespace.p && node == node.Parent.LastNode;
@@ -3037,16 +2722,14 @@ namespace OpenXmlPowerTools.HtmlToWml
             else
                 groupedCharacters = node.Value.GroupAdjacent(c => c == ' ' || c == '\r' || c == '\n');
 
-            string newString = groupedCharacters.Select(g =>
-            {
+            string newString = groupedCharacters.Select(g => {
                 if (g.Key == true)
                     return " ";
                 string x = g.Select(c => c.ToString()).StringConcatenate();
                 return x;
             })
                 .StringConcatenate();
-            if (!preserveWhiteSpace)
-            {
+            if (!preserveWhiteSpace) {
                 if (isFirst)
                     newString = newString.TrimStart();
                 if (isLast)
@@ -3061,13 +2744,11 @@ namespace OpenXmlPowerTools.HtmlToWml
             return newString;
         }
 
-        private static XElement GetNumberingProperties(XElement paragraph, HtmlToWmlConverterSettings settings)
-        {
+        private static XElement GetNumberingProperties(XElement paragraph, HtmlToWmlConverterSettings settings) {
             // Numbering properties ******************************************************
             NumberedItemAnnotation numberedItemAnnotation = null;
             XElement listElement = paragraph.Ancestors().FirstOrDefault(a => a.Name == XhtmlNoNamespace.ol || a.Name == XhtmlNoNamespace.ul);
-            if (listElement != null)
-            {
+            if (listElement != null) {
                 numberedItemAnnotation = listElement.Annotation<NumberedItemAnnotation>();
             }
             XElement numPr = null;
@@ -3078,8 +2759,7 @@ namespace OpenXmlPowerTools.HtmlToWml
             return numPr;
         }
 
-        private static XElement GetJustification(XElement blockLevelElement, HtmlToWmlConverterSettings settings)
-        {
+        private static XElement GetJustification(XElement blockLevelElement, HtmlToWmlConverterSettings settings) {
             // Justify ******************************************************
             CssExpression textAlignProperty = blockLevelElement.GetProp("text-align");
             string textAlign;
@@ -3092,19 +2772,16 @@ namespace OpenXmlPowerTools.HtmlToWml
             string jc = null;
             if (textAlign == "center")
                 jc = "center";
-            else
-            {
+            else {
                 if (textAlign == "right")
                     jc = "right";
-                else
-                {
+                else {
                     if (textAlign == "justify")
                         jc = "both";
                 }
             }
             string direction = GetDirection(blockLevelElement);
-            if (direction == "rtl")
-            {
+            if (direction == "rtl") {
                 if (jc == "left")
                     jc = "right";
                 else if (jc == "right")
@@ -3116,8 +2793,7 @@ namespace OpenXmlPowerTools.HtmlToWml
             return jcElement;
         }
 
-        private class HeadingInfo
-        {
+        private class HeadingInfo {
             public XName Name;
             public string StyleName;
         };
@@ -3134,15 +2810,13 @@ namespace OpenXmlPowerTools.HtmlToWml
                 new HeadingInfo { Name = XhtmlNoNamespace.h8, StyleName = "Heading8" },
             };
 
-        private static string GetDirection(XElement element)
-        {
+        private static string GetDirection(XElement element) {
             string retValue = "ltr";
             string dirString = (string)element.Attribute(XhtmlNoNamespace.dir);
             if (dirString != null && dirString.ToLower() == "rtl")
                 retValue = "rtl";
             CssExpression directionProp = element.GetProp("direction");
-            if (directionProp != null)
-            {
+            if (directionProp != null) {
                 string directionValue = directionProp.ToString();
                 if (directionValue.ToLower() == "rtl")
                     retValue = "rtl";
@@ -3150,8 +2824,7 @@ namespace OpenXmlPowerTools.HtmlToWml
             return retValue;
         }
 
-        private static XElement GetTableProperties(XElement element)
-        {
+        private static XElement GetTableProperties(XElement element) {
 
             XElement bidiVisual = null;
             string direction = GetDirection(element);
@@ -3169,8 +2842,7 @@ namespace OpenXmlPowerTools.HtmlToWml
             return tblPr;
         }
 
-        private static XElement GetTableShading(XElement element)
-        {
+        private static XElement GetTableShading(XElement element) {
             // todo this is not done.
             // needs to work for W.tbl and W.tc
             //XElement shd = new XElement(W.shd,
@@ -3181,11 +2853,9 @@ namespace OpenXmlPowerTools.HtmlToWml
             return null;
         }
 
-        private static XElement GetTableWidth(XElement element)
-        {
+        private static XElement GetTableWidth(XElement element) {
             CssExpression width = element.GetProp("width");
-            if (width.IsAuto)
-            {
+            if (width.IsAuto) {
                 return new XElement(W.tblW,
                     new XAttribute(W._w, "0"),
                     new XAttribute(W.type, "auto"));
@@ -3196,11 +2866,9 @@ namespace OpenXmlPowerTools.HtmlToWml
             return widthElement;
         }
 
-        private static XElement GetCellWidth(XElement element)
-        {
+        private static XElement GetCellWidth(XElement element) {
             CssExpression width = element.GetProp("width");
-            if (width.IsAuto)
-            {
+            if (width.IsAuto) {
                 return new XElement(W.tcW,
                     new XAttribute(W._w, "0"),
                     new XAttribute(W.type, "auto"));
@@ -3211,8 +2879,7 @@ namespace OpenXmlPowerTools.HtmlToWml
             return widthElement;
         }
 
-        private static XElement GetBlockContentBorders(XElement element, XName borderXName, bool forParagraph)
-        {
+        private static XElement GetBlockContentBorders(XElement element, XName borderXName, bool forParagraph) {
             if ((element.Name == XhtmlNoNamespace.td || element.Name == XhtmlNoNamespace.th || element.Name == XhtmlNoNamespace.caption) && forParagraph)
                 return null;
             XElement borders = new XElement(borderXName,
@@ -3239,8 +2906,7 @@ namespace OpenXmlPowerTools.HtmlToWml
             { "outset", "outset" },
         };
 
-        private static List<XAttribute> GetBorderAttributes(XElement element, string whichBorder)
-        {
+        private static List<XAttribute> GetBorderAttributes(XElement element, string whichBorder) {
             //if (whichBorder == "right")
             //    Console.WriteLine(1);
             CssExpression styleProp = element.GetProp(string.Format("border-{0}-style", whichBorder));
@@ -3260,8 +2926,7 @@ namespace OpenXmlPowerTools.HtmlToWml
             XAttribute space = null;
             XAttribute color = null;
 
-            if (styleProp != null)
-            {
+            if (styleProp != null) {
                 if (BorderStyleMap.ContainsKey(styleProp.ToString()))
                     val = new XAttribute(W.val, BorderStyleMap[styleProp.ToString()]);
                 else
@@ -3273,8 +2938,7 @@ namespace OpenXmlPowerTools.HtmlToWml
             double borderSizeInOneEighthPoint = borderSizeInTwips / 20 * 8;
             sz = new XAttribute(W.sz, (int)borderSizeInOneEighthPoint);
 
-            if (element.Name == XhtmlNoNamespace.td || element.Name == XhtmlNoNamespace.th)
-            {
+            if (element.Name == XhtmlNoNamespace.td || element.Name == XhtmlNoNamespace.th) {
                 space = new XAttribute(W.space, "0");
 #if false
                 // 2012-05-14 todo alternative algorithm for margin for cells
@@ -3287,12 +2951,9 @@ namespace OpenXmlPowerTools.HtmlToWml
                     space = new XAttribute(W.space, Math.Min(31, (double)points));
                 }
 #endif
-            }
-            else
-            {
+            } else {
                 space = new XAttribute(W.space, "0");
-                if (paddingProp != null)
-                {
+                if (paddingProp != null) {
                     // space is specified in points, not twips
                     TPoint points = (TPoint)paddingProp;
                     space = new XAttribute(W.space, (int)(Math.Min(31, (double)points)));
@@ -3303,8 +2964,7 @@ namespace OpenXmlPowerTools.HtmlToWml
                 color = new XAttribute(W.color, colorProp.ToString());
             // no default yet
 
-            if ((string)val == "none" && (double)space != 0d)
-            {
+            if ((string)val == "none" && (double)space != 0d) {
                 val.Value = "single";
                 sz.Value = "0";
                 //color.Value = "FF0000";
@@ -3323,12 +2983,10 @@ namespace OpenXmlPowerTools.HtmlToWml
             return attList;
         }
 
-        private static Twip GetBorderSize(XElement element, string whichBorder)
-        {
+        private static Twip GetBorderSize(XElement element, string whichBorder) {
             CssExpression widthProp = element.GetProp(string.Format("border-{0}-width", whichBorder));
 
-            if (widthProp != null && widthProp.Terms.Count() == 1)
-            {
+            if (widthProp != null && widthProp.Terms.Count() == 1) {
                 CssTerm term = widthProp.Terms.First();
                 Twip twips = (Twip)widthProp;
                 return twips;
@@ -3336,17 +2994,16 @@ namespace OpenXmlPowerTools.HtmlToWml
             return 12;
         }
 
-        private static XElement GetTableLook(XElement element)
-        {
+        private static XElement GetTableLook(XElement element) {
             XElement tblLook = XElement.Parse(
-                //@"<w:tblLook w:val='0600'
-                //  w:firstRow='0'
-                //  w:lastRow='0'
-                //  w:firstColumn='0'
-                //  w:lastColumn='0'
-                //  w:noHBand='1'
-                //  w:noVBand='1'
-                //  xmlns:w='http://schemas.openxmlformats.org/wordprocessingml/2006/main'/>"
+//@"<w:tblLook w:val='0600'
+//  w:firstRow='0'
+//  w:lastRow='0'
+//  w:firstColumn='0'
+//  w:lastColumn='0'
+//  w:noHBand='1'
+//  w:noVBand='1'
+//  xmlns:w='http://schemas.openxmlformats.org/wordprocessingml/2006/main'/>"
 
 @"<w:tblLook w:val='0600' xmlns:w='http://schemas.openxmlformats.org/wordprocessingml/2006/main'/>"
 
@@ -3355,8 +3012,7 @@ namespace OpenXmlPowerTools.HtmlToWml
             return tblLook;
         }
 
-        private static XElement GetTableGrid(XElement element, HtmlToWmlConverterSettings settings)
-        {
+        private static XElement GetTableGrid(XElement element, HtmlToWmlConverterSettings settings) {
             Twip? pageWidthInTwips = (int?)settings.SectPr.Elements(W.pgSz).Attributes(W._w).FirstOrDefault();
             Twip? marginLeft = (int?)settings.SectPr.Elements(W.pgMar).Attributes(W.left).FirstOrDefault();
             Twip? marginRight = (int?)settings.SectPr.Elements(W.pgMar).Attributes(W.right).FirstOrDefault();
@@ -3364,18 +3020,14 @@ namespace OpenXmlPowerTools.HtmlToWml
             XElement[][] tableArray = GetTableArray(element);
             int numberColumns = tableArray[0].Length;
             CssExpression[] columnWidths = new CssExpression[numberColumns];
-            for (int c = 0; c < numberColumns; c++)
-            {
+            for (int c = 0; c < numberColumns; c++) {
                 CssExpression columnWidth = new CssExpression { Terms = new List<CssTerm> { new CssTerm { Value = "auto" } } };
-                for (int r = 0; r < tableArray.Length; ++r)
-                {
-                    if (tableArray[r][c] != null)
-                    {
+                for (int r = 0; r < tableArray.Length; ++r) {
+                    if (tableArray[r][c] != null) {
                         XElement cell = tableArray[r][c];
                         CssExpression width = cell.GetProp("width");
                         XAttribute colSpan = cell.Attribute(XhtmlNoNamespace.colspan);
-                        if (colSpan == null && columnWidth.ToString() == "auto" && width.ToString() != "auto")
-                        {
+                        if (colSpan == null && columnWidth.ToString() == "auto" && width.ToString() != "auto") {
                             columnWidth = width;
                             break;
                         }
@@ -3390,17 +3042,13 @@ namespace OpenXmlPowerTools.HtmlToWml
             return tblGrid;
         }
 
-        private static Twip GetTwipWidth(CssExpression columnWidth, int printable)
-        {
+        private static Twip GetTwipWidth(CssExpression columnWidth, int printable) {
             Twip defaultTwipWidth = 1440;
-            if (columnWidth.Terms.Count() == 1)
-            {
+            if (columnWidth.Terms.Count() == 1) {
                 CssTerm term = columnWidth.Terms.First();
-                if (term.Unit == CssUnit.PT)
-                {
+                if (term.Unit == CssUnit.PT) {
                     Double ptValue;
-                    if (Double.TryParse(term.Value, out ptValue))
-                    {
+                    if (Double.TryParse(term.Value, out ptValue)) {
                         Twip twips = (long)(ptValue * 20);
                         return twips;
                     }
@@ -3410,18 +3058,15 @@ namespace OpenXmlPowerTools.HtmlToWml
             return defaultTwipWidth;
         }
 
-        private static XElement[][] GetTableArray(XElement table)
-        {
+        private static XElement[][] GetTableArray(XElement table) {
             List<XElement> rowList = table.DescendantsTrimmed(XhtmlNoNamespace.table).Where(e => e.Name == XhtmlNoNamespace.tr).ToList();
             int numberColumns = rowList.Select(r => r.Elements().Where(e => e.Name == XhtmlNoNamespace.td || e.Name == XhtmlNoNamespace.th).Count()).Max();
             XElement[][] tableArray = new XElement[rowList.Count()][];
             int rowNumber = 0;
-            foreach (var row in rowList)
-            {
+            foreach (var row in rowList) {
                 tableArray[rowNumber] = new XElement[numberColumns];
                 int columnNumber = 0;
-                foreach (var cell in row.Elements(XhtmlNoNamespace.td))
-                {
+                foreach (var cell in row.Elements(XhtmlNoNamespace.td)) {
                     tableArray[rowNumber][columnNumber] = cell;
                     columnNumber++;
                 }
@@ -3430,8 +3075,7 @@ namespace OpenXmlPowerTools.HtmlToWml
             return tableArray;
         }
 
-        private static XElement GetCellPropertiesForCaption(XElement element)
-        {
+        private static XElement GetCellPropertiesForCaption(XElement element) {
             XElement gridSpan = new XElement(W.gridSpan,
                     new XAttribute(W.val, 3));
 
@@ -3461,8 +3105,7 @@ namespace OpenXmlPowerTools.HtmlToWml
                 hideMark);
         }
 
-        private static XElement GetCellProperties(XElement element)
-        {
+        private static XElement GetCellProperties(XElement element) {
             int? colspan = (int?)element.Attribute(XhtmlNoNamespace.colspan);
             XElement gridSpan = null;
             if (colspan != null)
@@ -3487,15 +3130,14 @@ namespace OpenXmlPowerTools.HtmlToWml
                 vMerge = new XElement(W.vMerge);
             else
                 if (element.Attribute("HtmlToWmlVMergeRestart") != null)
-                    vMerge = new XElement(W.vMerge,
-                        new XAttribute(W.val, "restart"));
+                vMerge = new XElement(W.vMerge,
+                    new XAttribute(W.val, "restart"));
 
             string vAlignValue = (string)element.Attribute(XhtmlNoNamespace.valign);
             CssExpression verticalAlignmentProp = element.GetProp("vertical-align");
             if (verticalAlignmentProp != null && verticalAlignmentProp.ToString() != "inherit")
                 vAlignValue = verticalAlignmentProp.ToString();
-            if (vAlignValue != null)
-            {
+            if (vAlignValue != null) {
                 if (vAlignValue == "middle" || (vAlignValue != "top" && vAlignValue != "bottom"))
                     vAlignValue = "center";
                 vAlign = new XElement(W.vAlign, new XAttribute(W.val, vAlignValue));
@@ -3512,8 +3154,7 @@ namespace OpenXmlPowerTools.HtmlToWml
                 hideMark);
         }
 
-        private static XElement GetCellHeaderProperties(XElement element)
-        {
+        private static XElement GetCellHeaderProperties(XElement element) {
             //int? colspan = (int?)element.Attribute(Xhtml.colspan);
             //XElement gridSpan = null;
             //if (colspan != null)
@@ -3542,11 +3183,9 @@ namespace OpenXmlPowerTools.HtmlToWml
                 hideMark);
         }
 
-        private static XElement GetCellShading(XElement element)
-        {
+        private static XElement GetCellShading(XElement element) {
             CssExpression backgroundColorProp = element.GetProp("background-color");
-            if (backgroundColorProp != null && (string)backgroundColorProp != "transparent")
-            {
+            if (backgroundColorProp != null && (string)backgroundColorProp != "transparent") {
                 XElement shd = new XElement(W.shd,
                     new XAttribute(W.val, "clear"),
                     new XAttribute(W.color, "auto"),
@@ -3556,8 +3195,7 @@ namespace OpenXmlPowerTools.HtmlToWml
             return null;
         }
 
-        private static XElement GetCellMargins(XElement element)
-        {
+        private static XElement GetCellMargins(XElement element) {
             CssExpression topProp = element.GetProp("padding-top");
             CssExpression leftProp = element.GetProp("padding-left");
             CssExpression bottomProp = element.GetProp("padding-bottom");
@@ -3607,15 +3245,12 @@ namespace OpenXmlPowerTools.HtmlToWml
             </w:tcMar>
 #endif
 
-        private static XElement GetTableCellSpacing(XElement element)
-        {
+        private static XElement GetTableCellSpacing(XElement element) {
             XElement table = element.AncestorsAndSelf(XhtmlNoNamespace.table).FirstOrDefault();
             XElement tblCellSpacing = null;
-            if (table != null)
-            {
+            if (table != null) {
                 CssExpression borderCollapse = table.GetProp("border-collapse");
-                if (borderCollapse == null || (string)borderCollapse != "collapse")
-                {
+                if (borderCollapse == null || (string)borderCollapse != "collapse") {
                     // todo very incomplete
                     CssExpression borderSpacing = table.GetProp("border-spacing");
                     CssExpression marginTopProperty = element.GetProp("margin-top");
@@ -3642,8 +3277,7 @@ namespace OpenXmlPowerTools.HtmlToWml
             return tblCellSpacing;
         }
 
-        private static XElement GetTableCellMargins(XElement element)
-        {
+        private static XElement GetTableCellMargins(XElement element) {
             // todo very incomplete
             XElement tblCellMar = XElement.Parse(
 @"<w:tblCellMar xmlns:w='http://schemas.openxmlformats.org/wordprocessingml/2006/main'>
@@ -3660,12 +3294,10 @@ namespace OpenXmlPowerTools.HtmlToWml
             return tblCellMar;
         }
 
-        private static XElement GetTableRowProperties(XElement element)
-        {
+        private static XElement GetTableRowProperties(XElement element) {
             XElement trPr = null;
             XElement table = element.AncestorsAndSelf(XhtmlNoNamespace.table).FirstOrDefault();
-            if (table != null)
-            {
+            if (table != null) {
                 CssExpression heightProperty = element.GetProp("height");
                 //long? maxCellHeight = element.Elements(Xhtml.td).Aggregate((long?)null,
                 //    (XElement td, long? last) =>
@@ -3685,8 +3317,7 @@ namespace OpenXmlPowerTools.HtmlToWml
                     .Select(e => (long)(Twip)e)
                     .ToList();
                 XElement trHeight = null;
-                if (cellHeights.Any())
-                {
+                if (cellHeights.Any()) {
                     long max = cellHeights.Max();
                     trHeight = new XElement(W.trHeight,
                         new XAttribute(W.val, max));
@@ -3706,8 +3337,7 @@ namespace OpenXmlPowerTools.HtmlToWml
             return trPr;
         }
 
-        private static XAttribute GetXmlSpaceAttribute(string value)
-        {
+        private static XAttribute GetXmlSpaceAttribute(string value) {
             if (value.StartsWith(" ") || value.EndsWith(" "))
                 return new XAttribute(XNamespace.Xml + "space", "preserve");
             return null;
@@ -4120,16 +3750,13 @@ namespace OpenXmlPowerTools.HtmlToWml
                 {"wingdings3", "Wingdings 3"},
             };
 
-        private static TPoint? GetUsedSizeFromFontSizeProperty(CssExpression fontSize)
-        {
+        private static TPoint? GetUsedSizeFromFontSizeProperty(CssExpression fontSize) {
             if (fontSize == null)
                 return null;
-            if (fontSize.Terms.Count() == 1)
-            {
+            if (fontSize.Terms.Count() == 1) {
                 CssTerm term = fontSize.Terms.First();
                 double size = 0;
-                if (term.Unit == CssUnit.PT)
-                {
+                if (term.Unit == CssUnit.PT) {
                     if (double.TryParse(term.Value, out size))
                         return new TPoint(size);
                     return null;
@@ -4139,8 +3766,7 @@ namespace OpenXmlPowerTools.HtmlToWml
             return null;
         }
 
-        private static string GetUsedFontFromFontFamilyProperty(CssExpression fontFamily)
-        {
+        private static string GetUsedFontFromFontFamilyProperty(CssExpression fontFamily) {
             if (fontFamily == null)
                 return null;
             string fullFontFamily = fontFamily.Terms.Select(t => t + " ").StringConcatenate().Trim();
@@ -4150,13 +3776,11 @@ namespace OpenXmlPowerTools.HtmlToWml
             return null;
         }
 
-        private static XElement GetBackgroundProperty(XElement element)
-        {
+        private static XElement GetBackgroundProperty(XElement element) {
             CssExpression color = element.GetProp("background-color");
 
             // todo this really should test against default background color
-            if (color.ToString() != "transparent")
-            {
+            if (color.ToString() != "transparent") {
                 string hexString = color.ToString();
                 XElement shd = new XElement(W.shd,
                     new XAttribute(W.val, "clear"),
@@ -4169,15 +3793,12 @@ namespace OpenXmlPowerTools.HtmlToWml
 
     }
 
-    public class PictureId
-    {
+    public class PictureId {
         public int Id;
     }
 
-    class HtmlToWmlFontUpdater
-    {
-        public static void UpdateFontsPart(WordprocessingDocument wDoc, XElement html, HtmlToWmlConverterSettings settings)
-        {
+    class HtmlToWmlFontUpdater {
+        public static void UpdateFontsPart(WordprocessingDocument wDoc, XElement html, HtmlToWmlConverterSettings settings) {
             XDocument fontXDoc = wDoc.MainDocumentPart.FontTablePart.GetXDocument();
 
             PtUtils.AddElementIfMissing(fontXDoc,
@@ -4203,13 +3824,10 @@ namespace OpenXmlPowerTools.HtmlToWml
         }
     }
 
-    class NumberingUpdater
-    {
-        public static void InitializeNumberingPart(WordprocessingDocument wDoc)
-        {
+    class NumberingUpdater {
+        public static void InitializeNumberingPart(WordprocessingDocument wDoc) {
             NumberingDefinitionsPart numberingPart = wDoc.MainDocumentPart.NumberingDefinitionsPart;
-            if (numberingPart == null)
-            {
+            if (numberingPart == null) {
                 wDoc.MainDocumentPart.AddNewPart<NumberingDefinitionsPart>();
                 XDocument npXDoc = new XDocument(
                     new XElement(W.numbering,
@@ -4218,8 +3836,7 @@ namespace OpenXmlPowerTools.HtmlToWml
             }
         }
 
-        public static void GetNextNumId(WordprocessingDocument wDoc, out int nextNumId)
-        {
+        public static void GetNextNumId(WordprocessingDocument wDoc, out int nextNumId) {
             InitializeNumberingPart(wDoc);
             NumberingDefinitionsPart numberingPart = wDoc.MainDocumentPart.NumberingDefinitionsPart;
             XDocument numberingXDoc = numberingPart.GetXDocument();
@@ -4517,8 +4134,7 @@ namespace OpenXmlPowerTools.HtmlToWml
   </w:lvl>
 </w:abstractNum>";
 
-        public static void UpdateNumberingPart(WordprocessingDocument wDoc, XElement html, HtmlToWmlConverterSettings settings)
-        {
+        public static void UpdateNumberingPart(WordprocessingDocument wDoc, XElement html, HtmlToWmlConverterSettings settings) {
             InitializeNumberingPart(wDoc);
             NumberingDefinitionsPart numberingPart = wDoc.MainDocumentPart.NumberingDefinitionsPart;
             XDocument numberingXDoc = numberingPart.GetXDocument();
@@ -4532,59 +4148,47 @@ namespace OpenXmlPowerTools.HtmlToWml
             // add abstract numbering elements
             int currentNumId = nextNumId;
             int currentAbstractId = nextAbstractId;
-            foreach (var list in numberingElements)
-            {
+            foreach (var list in numberingElements) {
                 HtmlToWmlConverterCore.NumberedItemAnnotation nia = list.Annotation<HtmlToWmlConverterCore.NumberedItemAnnotation>();
-                if (!numToAbstractNum.ContainsKey(nia.numId))
-                {
+                if (!numToAbstractNum.ContainsKey(nia.numId)) {
                     numToAbstractNum.Add(nia.numId, currentAbstractId);
-                    if (list.Name == XhtmlNoNamespace.ul)
-                    {
+                    if (list.Name == XhtmlNoNamespace.ul) {
                         XElement bulletAbstract = XElement.Parse(String.Format(BulletAbstractXml, currentAbstractId++));
                         numberingXDoc.Root.Add(bulletAbstract);
                     }
-                    if (list.Name == XhtmlNoNamespace.ol)
-                    {
+                    if (list.Name == XhtmlNoNamespace.ol) {
                         string[] numFmt = new string[9];
                         string[] just = new string[9];
-                        for (int i = 0; i < numFmt.Length; ++i)
-                        {
+                        for (int i = 0; i < numFmt.Length; ++i) {
                             numFmt[i] = "decimal";
                             just[i] = "left";
                             XElement itemAtLevel = numberingElements
-                                .FirstOrDefault(nf =>
-                                {
+                                .FirstOrDefault(nf => {
                                     HtmlToWmlConverterCore.NumberedItemAnnotation n = nf.Annotation<HtmlToWmlConverterCore.NumberedItemAnnotation>();
                                     if (n != null && n.numId == nia.numId && n.ilvl == i)
                                         return true;
                                     return false;
                                 });
-                            if (itemAtLevel != null)
-                            {
+                            if (itemAtLevel != null) {
                                 HtmlToWmlConverterCore.NumberedItemAnnotation thisLevelNia = itemAtLevel.Annotation<HtmlToWmlConverterCore.NumberedItemAnnotation>();
                                 string thisLevelNumFmt = thisLevelNia.listStyleType;
-                                if (thisLevelNumFmt == "lower-alpha" || thisLevelNumFmt == "lower-latin")
-                                {
+                                if (thisLevelNumFmt == "lower-alpha" || thisLevelNumFmt == "lower-latin") {
                                     numFmt[i] = "lowerLetter";
                                     //just[i] = "left";
                                 }
-                                if (thisLevelNumFmt == "upper-alpha" || thisLevelNumFmt == "upper-latin")
-                                {
+                                if (thisLevelNumFmt == "upper-alpha" || thisLevelNumFmt == "upper-latin") {
                                     numFmt[i] = "upperLetter";
                                     //just[i] = "left";
                                 }
-                                if (thisLevelNumFmt == "decimal-leading-zero")
-                                {
+                                if (thisLevelNumFmt == "decimal-leading-zero") {
                                     numFmt[i] = "decimalZero";
                                     //just[i] = "left";
                                 }
-                                if (thisLevelNumFmt == "lower-roman")
-                                {
+                                if (thisLevelNumFmt == "lower-roman") {
                                     numFmt[i] = "lowerRoman";
                                     just[i] = "right";
                                 }
-                                if (thisLevelNumFmt == "upper-roman")
-                                {
+                                if (thisLevelNumFmt == "upper-roman") {
                                     numFmt[i] = "upperRoman";
                                     just[i] = "right";
                                 }
@@ -4598,8 +4202,7 @@ namespace OpenXmlPowerTools.HtmlToWml
                 }
             }
 
-            foreach (var list in numToAbstractNum)
-            {
+            foreach (var list in numToAbstractNum) {
                 numberingXDoc.Root.Add(
                     new XElement(W.num, new XAttribute(W.numId, list.Key),
                     new XElement(W.abstractNumId, new XAttribute(W.val, list.Value))));
@@ -4614,20 +4217,17 @@ namespace OpenXmlPowerTools.HtmlToWml
         }
     }
 
-    class StylesUpdater
-    {
+    class StylesUpdater {
         public static void UpdateStylesPart(
             WordprocessingDocument wDoc,
             XElement html,
             HtmlToWmlConverterSettings settings,
             CssDocument defaultCssDoc,
             CssDocument authorCssDoc,
-            CssDocument userCssDoc)
-        {
+            CssDocument userCssDoc) {
             XDocument styleXDoc = wDoc.MainDocumentPart.StyleDefinitionsPart.GetXDocument();
 
-            if (settings.DefaultSpacingElement != null)
-            {
+            if (settings.DefaultSpacingElement != null) {
                 XElement spacingElement = styleXDoc.Root.Elements(W.docDefaults).Elements(W.pPrDefault).Elements(W.pPr).Elements(W.spacing).FirstOrDefault();
                 if (spacingElement != null)
                     spacingElement.ReplaceWith(settings.DefaultSpacingElement);
@@ -4638,14 +4238,11 @@ namespace OpenXmlPowerTools.HtmlToWml
                 .Where(d => d.Attribute(XhtmlNoNamespace._class) != null && ((string)d.Attribute(XhtmlNoNamespace._class)).Split().Length == 1)
                 .Select(d => (string)d.Attribute(XhtmlNoNamespace._class));
 
-            foreach (var item in classes)
-            {
+            foreach (var item in classes) {
                 //string item = "ms-rteStyle-Byline";
-                foreach (var ruleSet in authorCssDoc.RuleSets)
-                {
+                foreach (var ruleSet in authorCssDoc.RuleSets) {
                     var selector = ruleSet.Selectors.Where(
-                        sel =>
-                        {
+                        sel => {
                             bool found = sel.SimpleSelectors.Count() == 1 &&
                                 sel.SimpleSelectors.First().Class == item &&
                                 (sel.SimpleSelectors.First().ElementName == "" ||
@@ -4653,8 +4250,7 @@ namespace OpenXmlPowerTools.HtmlToWml
                             return found;
                         }).FirstOrDefault();
                     var color = ruleSet.Declarations.FirstOrDefault(d => d.Name == "color");
-                    if (selector != null)
-                    {
+                    if (selector != null) {
                         //Console.WriteLine("found ruleset and selector for {0}", item);
                         string styleName = item.ToLower();
                         XElement newStyle = new XElement(W.style,
@@ -5303,10 +4899,8 @@ namespace OpenXmlPowerTools.HtmlToWml
         }
     }
 
-    class ThemeUpdater
-    {
-        public static void UpdateThemePart(WordprocessingDocument wDoc, XElement html, HtmlToWmlConverterSettings settings)
-        {
+    class ThemeUpdater {
+        public static void UpdateThemePart(WordprocessingDocument wDoc, XElement html, HtmlToWmlConverterSettings settings) {
             XDocument themeXDoc = wDoc.MainDocumentPart.ThemePart.GetXDocument();
 
             CssExpression minorFont = html.Descendants(XhtmlNoNamespace.body).FirstOrDefault().GetProp("font-family");
@@ -5332,8 +4926,7 @@ namespace OpenXmlPowerTools.HtmlToWml
                 .Elements(A.latin)
                 .Attributes(NoNamespace.typeface)
                 .FirstOrDefault();
-            if (majorTypeface != null && majorFont != null)
-            {
+            if (majorTypeface != null && majorFont != null) {
                 CssTerm term = majorFont.Terms.FirstOrDefault();
                 if (term != null)
                     majorTypeface.Value = term.Value;
@@ -5346,8 +4939,7 @@ namespace OpenXmlPowerTools.HtmlToWml
                 .Elements(A.latin)
                 .Attributes(NoNamespace.typeface)
                 .FirstOrDefault();
-            if (minorTypeface != null && minorFont != null)
-            {
+            if (minorTypeface != null && minorFont != null) {
                 CssTerm term = minorFont.Terms.FirstOrDefault();
                 if (term != null)
                     minorTypeface.Value = term.Value;

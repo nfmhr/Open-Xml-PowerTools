@@ -32,26 +32,52 @@ using OpenXmlPowerTools.HtmlToWml;
  * in this module do not require HtmlAgilityPack to run.
 *******************************************************************************************/
 
-class HtmlToWmlConverterExample
-{
-    static void Main(string[] args)
-    {
-        var n = DateTime.Now;
-        var tempDi = new DirectoryInfo(string.Format("ExampleOutput-{0:00}-{1:00}-{2:00}-{3:00}{4:00}{5:00}", n.Year - 2000, n.Month, n.Day, n.Hour, n.Minute, n.Second));
-        tempDi.Create();
+class HtmlToWmlConverterExample {
+    static void Main(string[] args) {
+        if(args.Length > 0 && args[0] == "-pipe") {
+            PipeToDocx();
+        } else {
+            var n = DateTime.Now;
+            var tempDi = new DirectoryInfo(string.Format("ExampleOutput-{0:00}-{1:00}-{2:00}-{3:00}{4:00}{5:00}", n.Year - 2000, n.Month, n.Day, n.Hour, n.Minute, n.Second));
+            tempDi.Create();
+            Console.Error.WriteLine($"Created {tempDi.Name}");
 
-        foreach (var file in Directory.GetFiles("../../", "*.html") /* .Where(f => f.Contains("Test-01")) */ )
-        {
-            ConvertToDocx(file, tempDi.FullName);
+            foreach (var file in Directory.GetFiles("../../../", "*.html") /* .Where(f => f.Contains("Test-01")) */ ) {
+                Console.WriteLine($"file: {file}");
+                ConvertToDocx(file, tempDi.FullName);
+            }
+        }
+    }
+    
+    private static void PipeToDocx() {
+        string inputString;
+        using (Stream inputStream = Console.OpenStandardInput()) {
+            using (StreamReader reader = new StreamReader(inputStream)) {
+                inputString = reader.ReadToEnd();
+            }
+        }
+
+        XElement html = HtmlToWmlReadAsXElement.StringToXElement(inputString);
+
+        string usedAuthorCss = HtmlToWmlConverter.CleanUpCss((string)html.Descendants().FirstOrDefault(d => d.Name.LocalName.ToLower() == "style"));
+
+        HtmlToWmlConverterSettings settings = HtmlToWmlConverter.GetDefaultSettings();
+        // image references in HTML files contain the path to the subdir that contains the images, so base URI is the name of the directory
+        // that contains the images
+        settings.BaseUriForImages = "public";
+
+        WmlDocument doc = HtmlToWmlConverter.ConvertHtmlToWml(defaultCss, usedAuthorCss, userCss, html, settings, null, null);
+
+        using (Stream outputStream = Console.OpenStandardOutput()) {
+            doc.WriteByteArray(outputStream);
         }
     }
 
-    private static void ConvertToDocx(string file, string destinationDir)
-    {
+    private static void ConvertToDocx(string file, string destinationDir) {
         bool s_ProduceAnnotatedHtml = true;
 
         var sourceHtmlFi = new FileInfo(file);
-        Console.WriteLine("Converting " + sourceHtmlFi.Name);
+        // Console.Error.WriteLine("Converting " + sourceHtmlFi.Name);
         var sourceImageDi = new DirectoryInfo(destinationDir);
 
         var destCssFi = new FileInfo(Path.Combine(destinationDir, sourceHtmlFi.Name.Replace(".html", "-2.css")));
@@ -59,7 +85,7 @@ class HtmlToWmlConverterExample
         var annotatedHtmlFi = new FileInfo(Path.Combine(destinationDir, sourceHtmlFi.Name.Replace(".html", "-4-Annotated.txt")));
 
         XElement html = HtmlToWmlReadAsXElement.ReadAsXElement(sourceHtmlFi);
-        
+
         string usedAuthorCss = HtmlToWmlConverter.CleanUpCss((string)html.Descendants().FirstOrDefault(d => d.Name.LocalName.ToLower() == "style"));
         File.WriteAllText(destCssFi.FullName, usedAuthorCss);
 
@@ -72,14 +98,10 @@ class HtmlToWmlConverterExample
         doc.SaveAs(destDocxFi.FullName);
     }
 
-    public class HtmlToWmlReadAsXElement
-    {
-        public static XElement ReadAsXElement(FileInfo sourceHtmlFi)
-        {
-            string htmlString = File.ReadAllText(sourceHtmlFi.FullName);
+    public class HtmlToWmlReadAsXElement {
+        public static XElement StringToXElement(string htmlString) {
             XElement html = null;
-            try
-            {
+            try {
                 html = XElement.Parse(htmlString);
             }
 #if USE_HTMLAGILITYPACK
@@ -104,8 +126,7 @@ class HtmlToWmlConverterExample
                 html = XElement.Parse(sb.ToString());
             }
 #else
-            catch (XmlException e)
-            {
+            catch (XmlException e) {
                 throw e;
             }
 #endif
@@ -113,12 +134,14 @@ class HtmlToWmlConverterExample
             html = (XElement)ConvertToNoNamespace(html);
             return html;
         }
+        public static XElement ReadAsXElement(FileInfo sourceHtmlFi) {
+            string htmlString = File.ReadAllText(sourceHtmlFi.FullName);
+            return StringToXElement(htmlString);
+        }
 
-        private static object ConvertToNoNamespace(XNode node)
-        {
+        private static object ConvertToNoNamespace(XNode node) {
             XElement element = node as XElement;
-            if (element != null)
-            {
+            if (element != null) {
                 return new XElement(element.Name.LocalName,
                     element.Attributes().Where(a => !a.IsNamespaceDeclaration),
                     element.Nodes().Select(n => ConvertToNoNamespace(n)));
