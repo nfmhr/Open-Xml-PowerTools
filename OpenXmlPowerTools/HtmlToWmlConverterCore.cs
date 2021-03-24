@@ -2024,7 +2024,11 @@ namespace OpenXmlPowerTools.HtmlToWml {
                 }
             } else {
                 try {
-                    string fullPath = $"{settings.BaseUriForImages}/{srcAttribute}".Replace("//", "/");
+                    string fullPath;
+                    if (settings.BaseUriForImages.Length > 0)
+                        fullPath = $"{settings.BaseUriForImages}/{srcAttribute}".Replace("//", "/");
+                    else
+                        fullPath = srcAttribute;
                     // Console.Error.WriteLine($"TransformImageToWml srcAttribute={srcAttribute}, fullPath={fullPath}");
                     bmp = new Bitmap(fullPath);
                 } catch (ArgumentException) {

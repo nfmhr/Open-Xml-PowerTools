@@ -33,9 +33,14 @@ using OpenXmlPowerTools.HtmlToWml;
 *******************************************************************************************/
 
 class HtmlToWmlConverterExample {
+    
+    // pass base uri for images as second argument
     static void Main(string[] args) {
         if(args.Length > 0 && args[0] == "-pipe") {
-            PipeToDocx();
+            if (args.Length == 1)
+                PipeToDocx("");
+            else
+                PipeToDocx(args[1]);
         } else {
             var n = DateTime.Now;
             var tempDi = new DirectoryInfo(string.Format("ExampleOutput-{0:00}-{1:00}-{2:00}-{3:00}{4:00}{5:00}", n.Year - 2000, n.Month, n.Day, n.Hour, n.Minute, n.Second));
@@ -49,7 +54,8 @@ class HtmlToWmlConverterExample {
         }
     }
     
-    private static void PipeToDocx() {
+    // basePath is for images
+    private static void PipeToDocx(string basePath) {
         string inputString;
         using (Stream inputStream = Console.OpenStandardInput()) {
             using (StreamReader reader = new StreamReader(inputStream)) {
@@ -64,7 +70,7 @@ class HtmlToWmlConverterExample {
         HtmlToWmlConverterSettings settings = HtmlToWmlConverter.GetDefaultSettings();
         // image references in HTML files contain the path to the subdir that contains the images, so base URI is the name of the directory
         // that contains the images
-        settings.BaseUriForImages = "public";
+        settings.BaseUriForImages = basePath;
 
         WmlDocument doc = HtmlToWmlConverter.ConvertHtmlToWml(defaultCss, usedAuthorCss, userCss, html, settings, null, null);
 
